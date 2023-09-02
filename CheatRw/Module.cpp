@@ -20,7 +20,7 @@ ULONG_PTR GetModuleX86(PEPROCESS Process, PPEB32 peb32, PUNICODE_STRING moudleNa
 		RtlInitUnicodeString(&uBaseName, baseDllName);
 		if (RtlCompareUnicodeString(moudleName, &uBaseName, TRUE) == 0)
 		{
-			KdPrint(("[hotge]:imageBase = %llx,sizeofimage = %llx,%wZ\r\n", (ULONG64)plistNext->DllBase, plistNext->SizeOfImage, moudleName));
+			KdPrint(("[hotge]:imageBase = %llx,sizeofimage = %x,%wZ\r\n", (ULONG64)plistNext->DllBase, plistNext->SizeOfImage, moudleName));
 			retBase = (ULONG_PTR)plistNext->DllBase;
 			if (sizeImage) *sizeImage = plistNext->SizeOfImage;
 			break;

@@ -1,5 +1,6 @@
 #pragma once
 #include <ntifs.h>
+#include "Unrevealed.h"
 
 // ============================================== 32 ============================================
 #pragma pack(4)
@@ -141,23 +142,6 @@ typedef struct _LDR_DATA_TABLE_ENTRY
 	ULONGLONG OriginalBase;                                                 //0xd0
 	LARGE_INTEGER LoadTime;                                          //0xd8
 }LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
-
-
-// ============================================== 导出函数 ============================================
-
-EXTERN_C void* NTAPI PsGetProcessWow64Process(PEPROCESS Process);
-
-EXTERN_C PVOID NTAPI PsGetProcessPeb(PEPROCESS Process);
-
-EXTERN_C NTSTATUS MmCopyVirtualMemory(
-	IN PEPROCESS FromProcess,
-	IN CONST VOID* FromAddress,
-	IN PEPROCESS ToProcess,
-	OUT PVOID ToAddress,
-	IN SIZE_T BufferSize,
-	IN KPROCESSOR_MODE PreviousMode,
-	OUT PSIZE_T NumberOfBytesCopied
-);
 
 
 // ============================================== 函数声明 ============================================

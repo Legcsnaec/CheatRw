@@ -17,9 +17,24 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Comm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CheatTools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Comm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Unrevealed.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CheatTools.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
