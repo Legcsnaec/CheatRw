@@ -13,14 +13,15 @@ typedef enum _COMM_NUMBER
     UnstallProtect,
     ModifyHeaderFlag,
     RestoreHeaderFlag,
-    InJectThread
+    InJectThread,
+    COMM_NUMBER_SIZE
 }COMM_NUMBER;
 
 typedef struct _PACKET
 {
     COMM_NUMBER commFlag;   // 通信标志
     COMM_NUMBER commFnID;   // 功能ID
-    ULONG64 content;        // 数据
+    PVOID data;             // 数据
     ULONG length;           // 长度
     ULONG result;           // 结果
 }PACKET, * PPACKET;
@@ -43,5 +44,9 @@ typedef ULONG(*_NtQueryInformationFile)(
     ULONG FileInformationClass
     );
 
+//Win10驱动通信
+typedef ULONG64(_fastcall* NtConvertBetweenProc)(char, PVOID, PVOID, PVOID);
+
 //================ 函数声明 ======================
-ULONG CommWin7(PVOID packet);
+ULONG CommWin7(ULONG cmd, PVOID inData, SIZE_T inSize);
+ULONG CommWin10(ULONG cmd, PVOID inData, SIZE_T inSize);

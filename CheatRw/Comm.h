@@ -43,12 +43,13 @@ typedef NTSTATUS(*_ExRegisterAttributeInformationCallback)(PRWCALL_BACK_FUN);
 NTSTATUS RegisterCallBack();		// 注册回调
 NTSTATUS RegisterCallBackWin7();	// Win7 回调注册
 NTSTATUS RegisterCallBackWin10();	// Win10 回调注册
+VOID UnRegCallBack();
+VOID UnRegCallBackWin7();
+VOID UnRegCallBackWin10();
 
 NTSTATUS RtlQueryAttributeInformation(HANDLE, PVOID);   // Win7回调函数
 NTSTATUS RtlSetAttributeInformation(HANDLE, PVOID);     // Win7回调函数
 
-VOID DispatchCallEntry(PPACKET);    // 功能调度函数
+NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3);   // Win10回调函数
 
-VOID UnRegCallBack();
-VOID UnRegCallBackWin7();
-VOID UnRegCallBackWin10();
+VOID DispatchCallEntry(PPACKET);    // 功能调度函数

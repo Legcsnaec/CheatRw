@@ -1,11 +1,21 @@
 #include "Comm.h"
 #include "CheatTools.h"
+#include "SearchCode.h"
 
-// ExpDisQueryAttributeInformation全局变量，ExRegisterAttributeInformationCallback里面会判断
-PULONG64 ExpDisQueryAttributeInfo = 0;
+// Win10 NtConvertBetweenAuxiliaryCounterAndPerformanceCounter  -->  KdEnumerateDebuggingDevices（其实是HalPrivateDispatchTable中的值）
+// 3环调用NtConvertBetweenAuxiliaryCounterAndPerformanceCounter，走到0环会调用KdEnumerateDebuggingDevices（全局变量）
+#define FConvertBetweenAuxiliary "488B05****75*488B05****E8"
+#define KdEnumerateDebuggingDevicesOffset 3
+PULONG64 KdEnumerateDebuggingAddr = 0;
+ULONG64 OldKdEnumerateDebugging = 0;
+
+// Win7	ExpDisQueryAttributeInformation全局变量(3环会走到0环的函数,也是我们要注册的函数)
+// ExRegisterAttributeInformationCallback 注册函数，里面会判断ExpDisQueryAttributeInformation 全局变量
+PULONG64 ExpDisQueryAttributeInfo = 0;	// AttributeInformationCallback[2]
 RWCALL_BACK_FUNC OldCallBack = { 0 };
 
-// 回调注册
+
+// 注册
 NTSTATUS RegisterCallBack()
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -20,7 +30,7 @@ NTSTATUS RegisterCallBack()
 	return status;
 }
 
-// Win7 回调注册
+// Win7 注册
 NTSTATUS RegisterCallBackWin7()
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -58,11 +68,66 @@ NTSTATUS RegisterCallBackWin7()
 	return status;
 }
 
-// Win10 回调注册
+// Win10 注册
 NTSTATUS RegisterCallBackWin10()
 {
-	return STATUS_SUCCESS;
+	NTSTATUS stat = STATUS_SUCCESS;
+	ULONG64 globalVarAddr = NULL;
+	globalVarAddr = SearchCode("ntoskrnl.exe", "PAGE", FConvertBetweenAuxiliary, KdEnumerateDebuggingDevicesOffset);
+	if (globalVarAddr == NULL)
+	{
+		KdPrint(("[info]: Comm_RegisterCallBackWin10 -- 搜索特征码失败\r\n"));
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	//公式：下一行地址(低八位) + 偏移 = 真正地址(低八位)
+	ULONG64 nextEip = globalVarAddr + 4;
+	ULONG tagetLowerAddr = ((nextEip << 32 >> 32) + *(PULONG)globalVarAddr);
+	KdEnumerateDebuggingAddr = (PULONG64)((nextEip >> 32 << 32) + tagetLowerAddr);
+	if (!MmIsAddressValid(KdEnumerateDebuggingAddr))
+	{
+		KdPrint(("[info]: Comm_RegisterCallBackWin10 -- KdEnumerateDebugging地址错误\r\n"));
+		return STATUS_UNSUCCESSFUL;
+	}
+	OldKdEnumerateDebugging = KdEnumerateDebuggingAddr[0];
+	KdEnumerateDebuggingAddr[0] = (ULONG64)NewKdEnumerateDebugging;
+	KdPrint(("[info]: Comm_RegisterCallBackWin10 -- 注册回调成功\r\n"));
+	return stat;
 }
+
+// 卸载
+VOID UnRegCallBack()
+{
+	if (CheatTools::OS_WIN7 == CheatTools::RtlGetOsVersion() || CheatTools::OS_WIN7SP1 == CheatTools::RtlGetOsVersion())
+	{
+		UnRegCallBackWin7();
+	}
+	else
+	{
+		UnRegCallBackWin10();
+	}
+}
+VOID UnRegCallBackWin7()
+{
+	if (ExpDisQueryAttributeInfo != 0)
+	{
+		ExpDisQueryAttributeInfo[0] = (ULONG64)OldCallBack.ExpDisQueryAttributeInformation;
+		ExpDisQueryAttributeInfo[1] = (ULONG64)OldCallBack.ExpDisSetAttributeInformation;
+	}
+	ExpDisQueryAttributeInfo = 0;
+	KdPrint(("[info]: Comm_UnRegCallBackWin7 -- 卸载Win7通信回调\r\n"));
+}
+VOID UnRegCallBackWin10()
+{
+	if (OldKdEnumerateDebugging != 0)
+	{
+		KdEnumerateDebuggingAddr[0] = OldKdEnumerateDebugging;
+	}
+	OldKdEnumerateDebugging = 0;
+	KdPrint(("[info]: Comm_UnRegCallBackWin10 -- 卸载Win10通信回调\r\n"));
+}
+
+// --------------------------------------------------------------------------------------
 
 // Win7回调函数
 NTSTATUS RtlQueryAttributeInformation(HANDLE handle, PVOID arg)
@@ -103,8 +168,24 @@ NTSTATUS RtlSetAttributeInformation(HANDLE handle, PVOID arg)
 }
 
 // Win10回调函数
-
-
+NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3)
+{
+	NTSTATUS status = STATUS_SUCCESS;
+	PPACKET packet = (PPACKET)arg1;
+	if (packet->commFlag = IsR3ToR0)
+	{
+		KdPrint(("[info]: Comm_NewKdEnumerateDebugging -- Win10接受到三环通信\r\n"));
+		DispatchCallEntry(packet);
+	}
+	else
+	{
+		if (OldKdEnumerateDebugging != 0)
+		{
+			return ((ULONG64(__fastcall*)(PVOID, PVOID, PVOID))OldKdEnumerateDebugging)(arg1, arg2, arg3);
+		}
+	}
+	return status;
+}
 
 // 功能调度函数
 VOID DispatchCallEntry(PPACKET packet)
@@ -130,31 +211,4 @@ VOID DispatchCallEntry(PPACKET packet)
 		break;
 	}
 	}
-}
-
-// 回调卸载
-VOID UnRegCallBack()
-{
-	if (CheatTools::OS_WIN7 == CheatTools::RtlGetOsVersion() || CheatTools::OS_WIN7SP1 == CheatTools::RtlGetOsVersion())
-	{
-		UnRegCallBackWin7();
-	}
-	else
-	{
-		UnRegCallBackWin10();
-	}
-}
-VOID UnRegCallBackWin7()
-{
-	if (ExpDisQueryAttributeInfo != 0)
-	{
-		ExpDisQueryAttributeInfo[0] = (ULONG64)OldCallBack.ExpDisQueryAttributeInformation;
-		ExpDisQueryAttributeInfo[1] = (ULONG64)OldCallBack.ExpDisSetAttributeInformation;
-		ExpDisQueryAttributeInfo = 0;
-		DbgPrint("[info]: Comm_UnRegCallBackWin7 -- 卸载Win7通信回调\r\n");
-	}
-}
-VOID UnRegCallBackWin10()
-{
-	DbgPrint("[info]: Comm_UnRegCallBackWin10 -- 卸载Win10通信回调\r\n");
 }

@@ -3,8 +3,6 @@
 #include "Unrevealed.h"
 
 // ============================================== 32 ============================================
-#pragma pack(4)
-
 typedef struct _PEB32
 {
 	UCHAR InheritedAddressSpace;                                            //0x0
@@ -78,8 +76,6 @@ typedef struct _LDR_DATA_TABLE_ENTRY32
 	ULONG OriginalBase;                                               //0x6c
 	LARGE_INTEGER LoadTime;                                           //0x70
 }LDR_DATA_TABLE_ENTRY32, * PLDR_DATA_TABLE_ENTRY32;
-
-#pragma pack(0)
 
 // ============================================== 64 ============================================
 typedef struct _PEB_LDR_DATA

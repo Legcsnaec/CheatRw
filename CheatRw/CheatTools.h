@@ -60,7 +60,7 @@ public:
 	static ULONG RtlByPassCallBackVerify(PVOID pDrv);
 	static VOID RtlResetCallBackVerify(PVOID ldr, ULONG oldFlags);
 
-	static NTSTATUS KeSleep(ULONG64 TimeOut);
+	static NTSTATUS KeSleep(ULONG64 timeOut);
 
 	static BOOLEAN PsIsWow64Process(HANDLE processId);
 };
