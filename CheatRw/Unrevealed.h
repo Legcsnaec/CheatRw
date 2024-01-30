@@ -847,8 +847,8 @@ typedef enum _KAPC_ENVIRONMENT {
 } KAPC_ENVIRONMENT;
 
 // 导出函数但未文档化的
-EXTERN_C
-{
+EXTERN_C_START
+
 	//extern VOID __security_check_cookie();
 	extern POBJECT_TYPE* IoDriverObjectType;
 	extern POBJECT_TYPE* ExMutantObjectType;
@@ -969,4 +969,5 @@ EXTERN_C
 		_In_ ULONG Length,
 		_Out_ PULONG ReturnLength
 	);
-}
+
+EXTERN_C_END

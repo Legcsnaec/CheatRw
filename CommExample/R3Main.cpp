@@ -4,10 +4,16 @@ using namespace std;
 
 int main()
 {
-	int ret = -1;
-	ULONG data = 0x123456;
-	ret = CommWin10(DriverRead, &data, 4);
-	printf("%d\n", ret);
+	NTSTATUS stat;
+
+	R3ModuleInfo data = { 0 };
+	data.ModuleName = (char*)"ntdll.dll";
+	data.pid = (HANDLE)4632;
+
+	stat = SendCommPacket(CMD_GetModuleR3, &data, 4);
+
+	printf("stat:%x   base:%llX    size:%llX\n", stat, data.ModuleBase, data.ModuleSize);
+
 
 	system("pause");
 	return 0;

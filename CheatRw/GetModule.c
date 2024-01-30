@@ -1,4 +1,4 @@
-#include "Module.h"
+#include "GetModule.h"
 
 // 32位
 ULONG_PTR GetModuleX86(PEPROCESS Process, PPEB32 peb32, PUNICODE_STRING moudleName, PULONG_PTR sizeImage)
@@ -36,6 +36,7 @@ ULONG_PTR GetModuleX64(PEPROCESS Process, PPEB peb64, PUNICODE_STRING moudleName
 	NTSTATUS stus = STATUS_SUCCESS;
 	ULONG_PTR retBase = 0;
 	ULONG_PTR copied = 0;
+	// 锁下页，未修复异常的隐藏驱动无法进行异常处理
 	stus = MmCopyVirtualMemory(Process, peb64, Process, peb64, 0x1, UserMode, &copied);
 	if (!NT_SUCCESS(stus)) return 0;
 
@@ -46,7 +47,7 @@ ULONG_PTR GetModuleX64(PEPROCESS Process, PPEB peb64, PUNICODE_STRING moudleName
 	{
 		if (RtlCompareUnicodeString(moudleName, &(plistNext->BaseDllName), TRUE) == 0)
 		{
-			KdPrint(("[hotge]:imageBase = %llx,sizeofimage = %llx,%wZ\r\n", (ULONG64)plistNext->DllBase, plistNext->SizeOfImage, moudleName));
+			KdPrint(("[info]:imageBase=%llx,sizeofimage=%llx,%wZ\r\n", (ULONG64)plistNext->DllBase, plistNext->SizeOfImage, moudleName));
 			retBase = (ULONG_PTR)plistNext->DllBase;
 			if (sizeImage) *sizeImage = plistNext->SizeOfImage;
 			break;
@@ -74,7 +75,7 @@ ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG_PTR sizeImage)
 	UNICODE_STRING uniModuleame = { 0 };
 	stus = RtlAnsiStringToUnicodeString(&uniModuleame, &str, TRUE);
 	if(!NT_SUCCESS(stus)) return 0;
-	_wcsupr(uniModuleame.Buffer);
+	_wcslwr_s(uniModuleame.Buffer, uniModuleame.Length);
 
 	ULONG_PTR module = 0;
 	KAPC_STATE apcStus = { 0 };
@@ -95,3 +96,4 @@ ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG_PTR sizeImage)
 	RtlFreeUnicodeString(&uniModuleame);
 	return module;
 }
+

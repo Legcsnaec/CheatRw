@@ -1,13 +1,12 @@
-#include <cstring>
 #include "CheatTools.h"
 #include "Unrevealed.h"
 
 /// <summary>
 /// 64\32位版本,根据基址和名称得到函数地址,导出表解析
 /// </summary>
-PVOID CheatTools::MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncName)
+PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncName)
 {
-	if (modBase == NULL || searchFuncName == nullptr)  return nullptr;
+	if (modBase == NULL || searchFuncName == NULL)  return NULL;
 	SIZE_T funcAddr = 0;
 
 	do
@@ -29,7 +28,7 @@ PVOID CheatTools::MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncN
 		PIMAGE_EXPORT_DIRECTORY pExportTable = (IMAGE_EXPORT_DIRECTORY*)(modBase + VirtualAddress);
 		if (NULL == pExportTable) break;
 
-		PULONG pAddrFns  = (PULONG)(modBase + pExportTable->AddressOfFunctions);
+		PULONG pAddrFns = (PULONG)(modBase + pExportTable->AddressOfFunctions);
 		PULONG pAddrNames = (PULONG)(modBase + pExportTable->AddressOfNames);
 		PUSHORT pAddrNameOrdinals = (PUSHORT)(modBase + pExportTable->AddressOfNameOrdinals);
 
@@ -39,9 +38,9 @@ PVOID CheatTools::MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncN
 		{
 			funcName = (char*)(modBase + pAddrNames[i]);
 			// 是3环的
-			if (modBase < MmUserProbeAddress)		
+			if (modBase < MmUserProbeAddress)
 			{
-				__try 
+				__try
 				{
 					if (!_strnicmp(searchFuncName, funcName, strlen(searchFuncName)))
 					{
@@ -56,7 +55,7 @@ PVOID CheatTools::MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncN
 				__except (1) { continue; }
 			}
 			// 是0环的
-			else 
+			else
 			{
 				if (MmIsAddressValid(funcName) && MmIsAddressValid(funcName + strlen(searchFuncName)))
 				{
@@ -72,16 +71,17 @@ PVOID CheatTools::MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncN
 				}
 			}
 		}
-	} while (false);
+	} while (0);
+
 	return (PVOID)funcAddr;
 }
 
 /// <summary>
 /// 申请用户空间内存
 /// </summary>
-PVOID CheatTools::MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG allcType, ULONG protect)
+PVOID MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG allcType, ULONG protect)
 {
-	PVOID Result = nullptr;
+	PVOID Result = NULL;
 	NTSTATUS(NTAPI * RtlAllocateVirtualMemory)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);
 	if (ExGetPreviousMode() == KernelMode)
 	{
@@ -96,14 +96,14 @@ PVOID CheatTools::MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T alloc
 	{
 		RtlAllocateVirtualMemory(processHandle, &Result, NULL, &allocSize, allcType, protect);
 	}
-	__except (1) { Result = nullptr; }
+	__except (1) { Result = NULL; }
 	return Result;
 }
 
 /// <summary>
 /// 释放用户空间内存
 /// </summary>
-NTSTATUS CheatTools::MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base)
+NTSTATUS MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base)
 {
 	SIZE_T size = 0;
 	NTSTATUS(NTAPI* RtlFreeVirtualMemory)(HANDLE, PVOID*, PSIZE_T, ULONG);
@@ -126,7 +126,7 @@ NTSTATUS CheatTools::MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base)
 /// <summary>
 /// 修改内存属性
 /// </summary>
-NTSTATUS CheatTools::RtlProtectVirtualMemory(PVOID address, SIZE_T spaceSize, ULONG newProtect, ULONG* oldProtect)
+NTSTATUS RtlProtectVirtualMemory(PVOID address, SIZE_T spaceSize, ULONG newProtect, ULONG* oldProtect)
 {
 	NTSTATUS stus = STATUS_UNSUCCESSFUL;
 	NTSTATUS(NTAPI* ZwProtectVirtualMemory)(HANDLE, PVOID*, PSIZE_T, ULONG, PULONG);
@@ -195,7 +195,7 @@ NTSTATUS CheatTools::RtlProtectVirtualMemory(PVOID address, SIZE_T spaceSize, UL
 /// <summary>
 /// 内存是否是安全的,通过是否有物理内存判断
 /// </summary>
-BOOLEAN CheatTools::MmIsAddressSafe(PVOID startAddress)
+BOOLEAN MmIsAddressSafe(PVOID startAddress)
 {
 	
 	return FALSE;
@@ -204,7 +204,7 @@ BOOLEAN CheatTools::MmIsAddressSafe(PVOID startAddress)
 /// <summary>
 /// 分割字符串
 /// </summary>
-VOID CheatTools::RtlSplitString(PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fileName)
+VOID RtlSplitString(PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fileName)
 {
 	PWCHAR pathBuffer = fullPath->Buffer;
 	int len = wcslen(pathBuffer) - 1;
@@ -242,7 +242,7 @@ VOID CheatTools::RtlSplitString(PUNICODE_STRING fullPath, OUT PWCHAR filePath, O
 /// <summary>
 /// 从字符串中删除所有字符子串 双指针实现
 /// </summary>
-VOID CheatTools::RtlDelSubStr(PWCHAR str, const PWCHAR subStr)
+VOID RtlDelSubStr(PWCHAR str, const PWCHAR subStr)
 {
 	PWCHAR readPos = str;
 	PWCHAR writePos = str;
@@ -270,20 +270,20 @@ VOID CheatTools::RtlDelSubStr(PWCHAR str, const PWCHAR subStr)
 /// <summary>
 /// 得到系统版本信息
 /// </summary>
-BOOLEAN CheatTools::RtlGetVersionInfo(RTL_OSVERSIONINFOEXW& info)
+BOOLEAN RtlGetVersionInfo(RTL_OSVERSIONINFOEXW* info)
 {
-	RtlZeroMemory(&info, sizeof(info));
-	info.dwOSVersionInfoSize = sizeof(info);
-	return NT_SUCCESS(RtlGetVersion((RTL_OSVERSIONINFOW*)(&info)));
+	RtlZeroMemory(info, sizeof(info));
+	info->dwOSVersionInfoSize = sizeof(info);
+	return NT_SUCCESS(RtlGetVersion((RTL_OSVERSIONINFOW*)(info)));
 }
 
 /// <summary>
 /// 得到具体的系统版本
 /// </summary>
-CheatTools::OS_VERSION CheatTools::RtlGetOsVersion()
+OS_VERSION RtlGetOsVersion()
 {
 	RTL_OSVERSIONINFOEXW info;
-	if (!CheatTools::RtlGetVersionInfo(info)) return OS_UNKNOWN;
+	if (!RtlGetVersionInfo(&info)) return OS_UNKNOWN;
 
 	if (info.dwMajorVersion == 5)
 	{
@@ -347,35 +347,25 @@ CheatTools::OS_VERSION CheatTools::RtlGetOsVersion()
 /// <summary>
 /// 过回调验证，注册回调的API会调用MmVerifyCallbackFunction来检查驱动签名
 /// </summary>
-ULONG CheatTools::RtlByPassCallBackVerify(PVOID ldr)
+ULONG RtlByPassCallBackVerify(PVOID ldr)
 {
-	_disable();
-	__writecr0(__readcr0() & 0xFFFFFFFFFFFeFFFF);
 	ULONG originFlags = ((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags;
 	((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags |= 0x20;
-	// 刷新缓存,确保内存上的值倒寄存器里面了
-	_mm_clflush(&(((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags)); 
-	__writecr0(__readcr0() | 0x10000);
-	_enable();
 	return originFlags;
 }
 
 /// <summary>
 /// 恢复回调验证
 /// </summary>
-VOID CheatTools::RtlResetCallBackVerify(PVOID ldr, ULONG oldFlags)
+VOID RtlResetCallBackVerify(PVOID ldr, ULONG oldFlags)
 {
-	_disable();
-	__writecr0(__readcr0() & 0xfffffffffffeffff);
 	((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags = oldFlags;
-	__writecr0(__readcr0() | 0x10000);
-	_enable();
 }
 
 /// <summary>
 /// 得到内核PE节的开始位置和结束位置
 /// </summary>
-NTSTATUS CheatTools::RtlFindImageSection(PVOID imageBase, CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd)
+NTSTATUS RtlFindImageSection(PVOID imageBase, CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd)
 {
 	PIMAGE_NT_HEADERS ntHeaders = NULL;
 	// 因为此只用于内核文件的PE节查找,为64位操作系统
@@ -410,7 +400,7 @@ NTSTATUS CheatTools::RtlFindImageSection(PVOID imageBase, CHAR* sectionName, OUT
 /// <summary>
 /// 特征码搜索
 /// </summary>
-PVOID CheatTools::RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode)
+PVOID RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode)
 {
 
 	return NULL;
@@ -419,7 +409,7 @@ PVOID CheatTools::RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode)
 /// <summary>
 /// 线程延迟几秒  Sleep
 /// </summary>
-NTSTATUS CheatTools::KeSleep(ULONG64 TimeOut)
+NTSTATUS KeSleep(ULONG64 TimeOut)
 {
 	LARGE_INTEGER delayTime = { 0 };
 	delayTime.QuadPart = -10 * 1000;
@@ -430,7 +420,7 @@ NTSTATUS CheatTools::KeSleep(ULONG64 TimeOut)
 /// <summary>
 /// 通过pid判断是否是32位进程
 /// </summary>
-BOOLEAN CheatTools::PsIsWow64Process(HANDLE processId)
+BOOLEAN PsIsWow64Process(HANDLE processId)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	PEPROCESS eProcess = NULL;

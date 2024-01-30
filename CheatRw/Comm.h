@@ -5,51 +5,33 @@
 typedef enum _COMM_NUMBER
 {
     IsR3ToR0 = 0x1000,
-    DriverRead,
-    DriverWrite,
-    GetMMType,
-    InstallProtect,
-    UnstallProtect,
-    ModifyHeaderFlag,
-    RestoreHeaderFlag,
-    InJectThread
+    CMD_DriverRead,
+    CMD_DriverWrite,
+    CMD_GetModuleR3,
+    CMD_GetMMType,
+    CMD_InstallProtect,
+    CMD_UninstallProtect,
+    CMD_RemoteCall
 }COMM_NUMBER;
 
 typedef struct _PACKET
 {
-    COMM_NUMBER commFlag;   // 通信标志
-    COMM_NUMBER commFnID;   // 功能ID
-    ULONG64 content;        // 数据
-    ULONG length;           // 长度
-    ULONG result;           // 结果
+    COMM_NUMBER CommFlag;   // 通信标志
+    COMM_NUMBER CommFnID;   // 功能ID
+    ULONG64 Request;        // 请求数据包(响应也在)
+    ULONG Length;           // 长度
+    ULONG ResponseCode;     // 结果 0正常 其他看异常
 }PACKET, * PPACKET;
 
-
-//================ 未文档化 Win7注册回调 ======================
-typedef NTSTATUS(*_AttributeInformationCallback)(HANDLE, PVOID);
-
-typedef struct _RWCALL_BACK_FUN
+typedef struct _R3ModuleInfo
 {
-    _AttributeInformationCallback ExpDisQueryAttributeInformation;
-    _AttributeInformationCallback ExpDisSetAttributeInformation;
-}RWCALL_BACK_FUNC, * PRWCALL_BACK_FUN;
-
-typedef NTSTATUS(*_ExRegisterAttributeInformationCallback)(PRWCALL_BACK_FUN);
-
-
+    _In_ HANDLE pid;
+    _In_ char* ModuleName;
+    _Out_ ULONG64 ModuleSize;
+    _Out_ ULONG64 ModuleBase;
+}R3ModuleInfo, * PR3ModuleInfo;
 
 //================ 函数声明 ======================
 
-NTSTATUS RegisterCallBack();		// 注册回调
-NTSTATUS RegisterCallBackWin7();	// Win7 回调注册
-NTSTATUS RegisterCallBackWin10();	// Win10 回调注册
-VOID UnRegCallBack();
-VOID UnRegCallBackWin7();
-VOID UnRegCallBackWin10();
-
-NTSTATUS RtlQueryAttributeInformation(HANDLE, PVOID);   // Win7回调函数
-NTSTATUS RtlSetAttributeInformation(HANDLE, PVOID);     // Win7回调函数
-
-NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3);   // Win10回调函数
-
-VOID DispatchCallEntry(PPACKET);    // 功能调度函数
+NTSTATUS CommInitialize();		    // 通信初始化-注册回调
+VOID CommUninitialize();            // 
