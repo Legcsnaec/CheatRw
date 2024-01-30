@@ -140,4 +140,4 @@ typedef struct _LDR_DATA_TABLE_ENTRY
 
 
 // ============================================== º¯ÊýÉùÃ÷ ============================================
-ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG_PTR sizeImage);
+ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG64 sizeImage);

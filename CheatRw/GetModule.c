@@ -1,7 +1,7 @@
 #include "GetModule.h"
 
 // 32位
-ULONG_PTR GetModuleX86(PEPROCESS Process, PPEB32 peb32, PUNICODE_STRING moudleName, PULONG_PTR sizeImage)
+ULONG_PTR GetModuleX86(PEPROCESS Process, PPEB32 peb32, PUNICODE_STRING moudleName, PULONG64 sizeImage)
 {
 	NTSTATUS stus = STATUS_SUCCESS;
 	ULONG_PTR retBase = 0;
@@ -31,7 +31,7 @@ ULONG_PTR GetModuleX86(PEPROCESS Process, PPEB32 peb32, PUNICODE_STRING moudleNa
 }
 
 // 64位
-ULONG_PTR GetModuleX64(PEPROCESS Process, PPEB peb64, PUNICODE_STRING moudleName, PULONG_PTR sizeImage)
+ULONG_PTR GetModuleX64(PEPROCESS Process, PPEB peb64, PUNICODE_STRING moudleName, PULONG64 sizeImage)
 {
 	NTSTATUS stus = STATUS_SUCCESS;
 	ULONG_PTR retBase = 0;
@@ -60,7 +60,7 @@ ULONG_PTR GetModuleX64(PEPROCESS Process, PPEB peb64, PUNICODE_STRING moudleName
 /// <summary>
 /// 得到模块地址
 /// </summary>
-ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG_PTR sizeImage)
+ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG64 sizeImage)
 {
 	if (moduleName == 0) return 0;
 
@@ -96,4 +96,3 @@ ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG_PTR sizeImage)
 	RtlFreeUnicodeString(&uniModuleame);
 	return module;
 }
-

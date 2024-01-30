@@ -1,6 +1,9 @@
 #pragma once
 #include <ntifs.h>
 
+// 一些未文档化但是导出了的函数
+// 一些未文档化的结构
+
 #pragma region IA64_PTE_STATEMENT
 #define PTE_PER_PAGE_BITS 10
 #define _HARDWARE_PTE_WORKING_SET_BITS  11

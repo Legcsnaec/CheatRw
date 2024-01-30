@@ -29,6 +29,9 @@
     <ClCompile Include="CheatTools.c">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="ReadWrite.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GetModule.h">
@@ -45,6 +48,9 @@
     </ClInclude>
     <ClInclude Include="SearchCode.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="ReadWrite.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

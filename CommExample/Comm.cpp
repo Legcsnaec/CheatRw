@@ -5,7 +5,7 @@ NtConvertBetweenPfn NtConvertBetween = NULL;				// WIN 10
 NtQueryInformationFilePfn NtQueryInformationFile = NULL;	// WIN 7
 
 // Win7通信函数
-ULONG CommWin7(ULONG cmd, ULONG64 request,SIZE_T inSize)
+ULONG CommWin7(ULONG cmd, PVOID request,SIZE_T inSize)
 {
 	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtQueryInformationFile == NULL)
 	{
@@ -27,7 +27,7 @@ ULONG CommWin7(ULONG cmd, ULONG64 request,SIZE_T inSize)
 }
 
 //Win10通信
-ULONG CommWin10(ULONG cmd, ULONG64 request, SIZE_T inSize)
+ULONG CommWin10(ULONG cmd, PVOID request, SIZE_T inSize)
 {
 	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtConvertBetween == NULL)
 	{
@@ -112,11 +112,11 @@ NTSTATUS SendCommPacket(ULONG cmd, PVOID inData, SIZE_T inSize)
 	{
 		if (buildNumber == 7600 || buildNumber == 7601)
 		{
-			stat = CommWin7(cmd, (ULONG64)inData, inSize);
+			stat = CommWin7(cmd, inData, inSize);
 		}
 		else
 		{
-			stat = CommWin10(cmd, (ULONG64)inData, inSize);
+			stat = CommWin10(cmd, inData, inSize);
 		}
 	}
 	else

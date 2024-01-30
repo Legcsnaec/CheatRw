@@ -170,12 +170,14 @@
     <ClCompile Include="Comm.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="GetModule.c" />
+    <ClCompile Include="ReadWrite.c" />
     <ClCompile Include="SearchCode.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CheatTools.h" />
     <ClInclude Include="Comm.h" />
     <ClInclude Include="GetModule.h" />
+    <ClInclude Include="ReadWrite.h" />
     <ClInclude Include="SearchCode.h" />
     <ClInclude Include="Unrevealed.h" />
   </ItemGroup>

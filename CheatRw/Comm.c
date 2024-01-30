@@ -2,6 +2,7 @@
 #include "CheatTools.h"
 #include "SearchCode.h"
 #include "GetModule.h"
+#include "ReadWrite.h"
 
 // Win10 NtConvertBetweenAuxiliaryCounterAndPerformanceCounter  -->  KdEnumerateDebuggingDevices（其实是HalPrivateDispatchTable中的值）
 // 3环调用NtConvertBetweenAuxiliaryCounterAndPerformanceCounter，走到0环会调用KdEnumerateDebuggingDevices（全局变量）
@@ -67,7 +68,7 @@ NTSTATUS RegisterCallBackWin7()
 		LARGE_INTEGER targetEip = { 0 };
 		targetEip.QuadPart = ((ULONG64)registerCallBack + ExpDisQueryAttributeInformationOffset + 4);
 		targetEip.LowPart = targetEip.LowPart + offset;
-		ExpDisQueryAttributeInfo = targetEip.QuadPart;
+		ExpDisQueryAttributeInfo = (PULONG64)targetEip.QuadPart;
 
 		// 保存原有+清空重赋值
 		OldCallBack.ExpDisQueryAttributeInformation = (_AttributeInformationCallback)ExpDisQueryAttributeInfo[0];
@@ -95,9 +96,9 @@ NTSTATUS RegisterCallBackWin7()
 NTSTATUS RegisterCallBackWin10()
 {
 	NTSTATUS stat = STATUS_SUCCESS;
-	ULONG64 globalVarAddr = NULL;
+	ULONG64 globalVarAddr = 0;
 	globalVarAddr = SearchCode("ntoskrnl.exe", "PAGE", FConvertBetweenAuxiliaryCode, KdEnumerateDebuggingDevicesOffset);
-	if (globalVarAddr == NULL)
+	if (globalVarAddr == 0)
 	{
 		KdPrint(("[info]: Comm_RegisterCallBackWin10 -- 搜索特征码失败\r\n"));
 		return STATUS_UNSUCCESSFUL;
@@ -106,7 +107,7 @@ NTSTATUS RegisterCallBackWin10()
 	LARGE_INTEGER targetEip = { 0 };
 	targetEip.QuadPart = globalVarAddr + 4;
 	targetEip.LowPart = targetEip.LowPart + *(PULONG)globalVarAddr;
-	KdEnumerateDebuggingAddr = targetEip.QuadPart;
+	KdEnumerateDebuggingAddr = (PULONG64)targetEip.QuadPart;
 	if (!MmIsAddressValid(KdEnumerateDebuggingAddr))
 	{
 		KdPrint(("[info]: Comm_RegisterCallBackWin10 -- KdEnumerateDebugging地址错误\r\n"));
@@ -190,7 +191,7 @@ NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3)
 	{
 		if (OldKdEnumerateDebugging != 0)
 		{
-			return ((ULONG64(__fastcall*)(PVOID, PVOID, PVOID))OldKdEnumerateDebugging)(arg1, arg2, arg3);
+			return ((NTSTATUS(__fastcall*)(PVOID, PVOID, PVOID))OldKdEnumerateDebugging)(arg1, arg2, arg3);
 		}
 	}
 	return STATUS_SUCCESS;
@@ -204,13 +205,29 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_DriverRead:
 	{
 		KdPrint(("[info]: Comm_DispatchCallEntry -- 读功能\r\n"));
-		packet->ResponseCode = 200;
+		PReadMemInfo info = packet->Request;
+		if (info)
+		{
+			packet->ResponseCode = ReadMemory(info->Pid, info->TagAddress, info->ReadBuffer, info->ReadSize);
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
 		break;
 	}
 	case CMD_DriverWrite:
 	{
 		KdPrint(("[info]: Comm_DispatchCallEntry -- 写功能\r\n"));
-		packet->ResponseCode = 300;
+		PReadMemInfo info = packet->Request;
+		if (info)
+		{
+			packet->ResponseCode = ReadMemory(info->Pid, info->TagAddress, info->ReadBuffer, info->ReadSize);
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
 		break;
 	}
 	case CMD_GetModuleR3:
@@ -220,7 +237,7 @@ VOID DispatchCallEntry(PPACKET packet)
 		if (info)
 		{
 			ULONG64 moduleSize = 0;
-			info->ModuleBase = GetModuleR3(info->pid, info->ModuleName, &moduleSize);
+			info->ModuleBase = GetModuleR3(info->Pid, info->ModuleName, &moduleSize);
 			info->ModuleSize = moduleSize;
 			packet->ResponseCode = 0;
 		}

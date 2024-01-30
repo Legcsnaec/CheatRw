@@ -18,20 +18,28 @@ typedef struct _PACKET
 {
     COMM_NUMBER CommFlag;   // 通信标志
     COMM_NUMBER CommFnID;   // 功能ID
-    ULONG64 Request;        // 请求数据包(响应也在)
+    PVOID Request;          // 请求数据包(响应也在)
     ULONG Length;           // 长度
     ULONG ResponseCode;     // 结果 0正常 其他看异常
 }PACKET, * PPACKET;
 
 typedef struct _R3ModuleInfo
 {
-    _In_ HANDLE pid;
-    _In_ char* ModuleName;
+    _In_  HANDLE Pid;
+    _In_  char* ModuleName;
     _Out_ ULONG64 ModuleSize;
     _Out_ ULONG64 ModuleBase;
 }R3ModuleInfo, * PR3ModuleInfo;
 
+typedef struct _ReadMemInfo
+{
+    _In_  HANDLE Pid;
+    _In_  PVOID TagAddress;
+    _Out_ PVOID ReadBuffer;
+    _In_  SIZE_T ReadSize;
+}ReadMemInfo, * PReadMemInfo;
+
 //================ 函数声明 ======================
 
-NTSTATUS CommInitialize();		    // 通信初始化-注册回调
-VOID CommUninitialize();            // 
+NTSTATUS CommInitialize();	// 通信初始化-注册回调
+VOID CommUninitialize(); 
