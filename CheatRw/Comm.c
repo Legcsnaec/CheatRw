@@ -1,8 +1,6 @@
 #include "Comm.h"
 #include "CheatTools.h"
 #include "SearchCode.h"
-#include "GetModule.h"
-#include "ReadWrite.h"
 
 // Win10 NtConvertBetweenAuxiliaryCounterAndPerformanceCounter  -->  KdEnumerateDebuggingDevices（其实是HalPrivateDispatchTable中的值）
 // 3环调用NtConvertBetweenAuxiliaryCounterAndPerformanceCounter，走到0环会调用KdEnumerateDebuggingDevices（全局变量）
@@ -29,6 +27,8 @@ ULONG64 OldKdEnumerateDebugging = 0;
 PULONG64 ExpDisQueryAttributeInfo = 0;
 RWCALL_BACK_FUNC OldCallBack = { 0 };
 
+DispatchCallEntryPfn DispatchCallBack = NULL;
+
 // 函数声明
 NTSTATUS RegisterCallBackWin7();
 NTSTATUS RegisterCallBackWin10();
@@ -37,12 +37,15 @@ VOID UnRegCallBackWin10();
 NTSTATUS RtlQueryAttributeInformation(HANDLE, PVOID);                   // Win7通信回调函数
 NTSTATUS RtlSetAttributeInformation(HANDLE, PVOID);                     // Win7通信回调函数
 NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3);   // Win10通信回调函数
-VOID DispatchCallEntry(PPACKET);                                        // 功能调度函数
 
 // 通信初始化
-NTSTATUS CommInitialize()
+NTSTATUS CommInitialize(DispatchCallEntryPfn callBack)
 {
 	NTSTATUS status = STATUS_SUCCESS;
+	if (DispatchCallBack == NULL)
+	{
+		DispatchCallBack = callBack;
+	}
 	if (OS_WIN7 == RtlGetOsVersion() || OS_WIN7SP1 == RtlGetOsVersion())
 	{
 		status = RegisterCallBackWin7();
@@ -160,7 +163,10 @@ NTSTATUS RtlQueryAttributeInformation(HANDLE handle, PVOID arg)
 	if (packet->CommFlag == IsR3ToR0)
 	{
 		KdPrint(("[info]: Comm_RtlQueryAttributeInformation -- ExpDisQueryAttributeInformation回调触发\r\n"));
-		DispatchCallEntry(packet);
+		if (DispatchCallBack)
+		{
+			DispatchCallBack(packet);
+		}
 	}
 	else
 	{
@@ -185,7 +191,10 @@ NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3)
 	if (packet->CommFlag = IsR3ToR0)
 	{
 		KdPrint(("[info]: Comm_NewKdEnumerateDebugging -- Win10接受到三环通信\r\n"));
-		DispatchCallEntry(packet);
+		if (DispatchCallBack)
+		{
+			DispatchCallBack(packet);
+		}
 	}
 	else
 	{
@@ -195,62 +204,4 @@ NTSTATUS NewKdEnumerateDebugging(PVOID arg1, PVOID arg2, PVOID arg3)
 		}
 	}
 	return STATUS_SUCCESS;
-}
-
-// 功能调度函数
-VOID DispatchCallEntry(PPACKET packet)
-{
-	switch (packet->CommFnID)
-	{
-	case CMD_DriverRead:
-	{
-		KdPrint(("[info]: Comm_DispatchCallEntry -- 读功能\r\n"));
-		PReadMemInfo info = packet->Request;
-		if (info)
-		{
-			packet->ResponseCode = ReadMemory(info->Pid, info->TagAddress, info->ReadBuffer, info->ReadSize);
-		}
-		else
-		{
-			packet->ResponseCode = STATUS_UNSUCCESSFUL;
-		}
-		break;
-	}
-	case CMD_DriverWrite:
-	{
-		KdPrint(("[info]: Comm_DispatchCallEntry -- 写功能\r\n"));
-		PReadMemInfo info = packet->Request;
-		if (info)
-		{
-			packet->ResponseCode = ReadMemory(info->Pid, info->TagAddress, info->ReadBuffer, info->ReadSize);
-		}
-		else
-		{
-			packet->ResponseCode = STATUS_UNSUCCESSFUL;
-		}
-		break;
-	}
-	case CMD_GetModuleR3:
-	{
-		KdPrint(("[info]: Comm_DispatchCallEntry -- 得到R3模块基址和大小\r\n"));
-		PR3ModuleInfo info = packet->Request;
-		if (info)
-		{
-			ULONG64 moduleSize = 0;
-			info->ModuleBase = GetModuleR3(info->Pid, info->ModuleName, &moduleSize);
-			info->ModuleSize = moduleSize;
-			packet->ResponseCode = 0;
-		}
-		if (!info || info->ModuleBase == 0)
-		{
-			packet->ResponseCode = STATUS_UNSUCCESSFUL;
-		}
-		break;
-	}
-	default:
-	{
-		KdPrint(("[info]: Comm_DispatchCallEntry -- 无效的通信ID\r\n"));
-		break;
-	}
-	}
 }

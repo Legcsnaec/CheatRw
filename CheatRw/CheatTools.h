@@ -56,20 +56,17 @@ BOOLEAN MmIsAddressSafe(PVOID startAddress);
 // 特征码搜索(未完成)
 PVOID RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode);
 
-// 修改内存属性
-NTSTATUS RtlProtectVirtualMemory(PVOID address, SIZE_T spaceSize, ULONG newProtect, ULONG* oldProtect);
-
 // 得到内核PE节的开始位置和结束位置
-NTSTATUS RtlFindImageSection(PVOID imageBase, CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd);
+NTSTATUS RtlFindImageSection(IN PVOID imageBase, IN CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd);
 
 // 删除字符串
 VOID RtlDelSubStr(PWCHAR str, PWCHAR subStr);
 
 // 分割字符串
-VOID RtlSplitString(PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fileName);
+VOID RtlSplitString(IN PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fileName);
 
 // 得到系统版本信息
-BOOLEAN RtlGetVersionInfo(RTL_OSVERSIONINFOEXW* info);
+BOOLEAN RtlGetVersionInfo(OUT RTL_OSVERSIONINFOEXW* info);
 OS_VERSION RtlGetOsVersion();
 
 // 过签名验证
@@ -81,3 +78,23 @@ NTSTATUS KeSleep(ULONG64 timeOut);
 
 // 通过pid判断是否是32位进程
 BOOLEAN PsIsWow64Process(HANDLE processId);
+
+// 关写保护
+ULONG64 wpoff();
+
+// 开写保护
+VOID wpon(ULONG64 mcr0);
+
+// mdl映射地址
+PVOID MdlMapMemory(OUT PMDL* mdl, IN PVOID tagAddress, IN SIZE_T mapSize, IN MODE preMode);
+
+// mdl取消映射
+VOID MdlUnMapMemory(IN PMDL mdl, IN PVOID mapBase);
+
+// -------  接口设计  -------
+// 
+// MmCopyVirtualMemory接口封装一层,动态获取函数地址(过iat hook "瓦罗兰内存读写")
+NTSTATUS NTAPI CT_MmCopyVirtualMemory(PEPROCESS SourceProcess, PVOID SourceAddress, PEPROCESS TargetProcess, PVOID TargetAddress, SIZE_T BufferSize, KPROCESSOR_MODE PreviousMode, PSIZE_T ReturnSize);
+
+// ZwProtectVirtualMemory接口封装一层,修改内存属性(有try语句异常处理)
+NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID address, IN SIZE_T spaceSize, IN ULONG newProtect, OUT ULONG* oldProtect);

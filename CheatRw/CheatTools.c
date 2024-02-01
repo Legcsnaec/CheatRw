@@ -1,12 +1,10 @@
 #include "CheatTools.h"
 #include "Unrevealed.h"
 
-/// <summary>
-/// 64\32位版本,根据基址和名称得到函数地址,导出表解析
-/// </summary>
-PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncName)
+// 64\32位版本,根据基址和名称得到函数地址,导出表解析
+PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 {
-	if (modBase == NULL || searchFuncName == NULL)  return NULL;
+	if (modBase == NULL || searchFnName == NULL)  return NULL;
 	SIZE_T funcAddr = 0;
 
 	do
@@ -42,9 +40,9 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncName)
 			{
 				__try
 				{
-					if (!_strnicmp(searchFuncName, funcName, strlen(searchFuncName)))
+					if (!_strnicmp(searchFnName, funcName, strlen(searchFnName)))
 					{
-						if (funcName[strlen(searchFuncName)] == NULL)
+						if (funcName[strlen(searchFnName)] == NULL)
 						{
 							funcOrdinal = pExportTable->Base + pAddrNameOrdinals[i] - 1;
 							funcAddr = modBase + pAddrFns[funcOrdinal];
@@ -57,11 +55,11 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncName)
 			// 是0环的
 			else
 			{
-				if (MmIsAddressValid(funcName) && MmIsAddressValid(funcName + strlen(searchFuncName)))
+				if (MmIsAddressValid(funcName) && MmIsAddressValid(funcName + strlen(searchFnName)))
 				{
-					if (!_strnicmp(searchFuncName, funcName, strlen(searchFuncName)))
+					if (!_strnicmp(searchFnName, funcName, strlen(searchFnName)))
 					{
-						if (funcName[strlen(searchFuncName)] == NULL)
+						if (funcName[strlen(searchFnName)] == NULL)
 						{
 							funcOrdinal = pExportTable->Base + pAddrNameOrdinals[i] - 1;
 							funcAddr = modBase + pAddrFns[funcOrdinal];
@@ -76,9 +74,7 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFuncName)
 	return (PVOID)funcAddr;
 }
 
-/// <summary>
-/// 申请用户空间内存
-/// </summary>
+// 申请用户空间内存
 PVOID MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG allcType, ULONG protect)
 {
 	PVOID Result = NULL;
@@ -100,9 +96,7 @@ PVOID MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG 
 	return Result;
 }
 
-/// <summary>
-/// 释放用户空间内存
-/// </summary>
+// 释放用户空间内存
 NTSTATUS MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base)
 {
 	SIZE_T size = 0;
@@ -123,88 +117,15 @@ NTSTATUS MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base)
 	return STATUS_SUCCESS;
 }
 
-/// <summary>
-/// 修改内存属性
-/// </summary>
-NTSTATUS RtlProtectVirtualMemory(PVOID address, SIZE_T spaceSize, ULONG newProtect, ULONG* oldProtect)
-{
-	NTSTATUS stus = STATUS_UNSUCCESSFUL;
-	NTSTATUS(NTAPI* ZwProtectVirtualMemory)(HANDLE, PVOID*, PSIZE_T, ULONG, PULONG);
-	
-	// 字符数组
-	WCHAR zwQuerySec[] = { 'Z','w','Q','u','e','r','y','S','e','c','t','i','o','n', 0, 0 };
-	WCHAR zwProtectVir[] = { 'Z','w','P','r','o','t','e','c','t','V','i','r','t','u','a','l','M','e','m','o','r','y', 0, 0 };
-	UNICODE_STRING uZwQuerySec = { 0 };
-	UNICODE_STRING uProtectVir = { 0 };
-	RtlInitUnicodeString(&uZwQuerySec, zwQuerySec);
-	RtlInitUnicodeString(&uProtectVir, zwProtectVir);
-
-	(*(PVOID*)&ZwProtectVirtualMemory) = MmGetSystemRoutineAddress(&uProtectVir);
-	if (ZwProtectVirtualMemory == NULL)
-	{
-		// win7 win8 win8.1未导出Protect函数,通过偏移量找
-		UCHAR* ZwQuerySection = (UCHAR*)MmGetSystemRoutineAddress(&uZwQuerySec);
-		if (ZwQuerySection)
-		{
-			for (size_t i = 5; i < 100; i++)
-			{
-				// i=5避免直接定位到ZwQuerySection函数头
-				// 48 8B C4 : Mov Rax,Rsp
-				if (*(ZwQuerySection - i - 0) == 0x48 && *(ZwQuerySection - i + 1) == 0x8B && *(ZwQuerySection - i + 2) == 0xC4)
-				{
-					(*(PVOID*)&ZwProtectVirtualMemory) = (ZwQuerySection - i - 0);
-					break;
-				}
-			}
-		}
-	}
-	if (ZwProtectVirtualMemory != NULL)
-	{
-		// 设置当前线程的先前模式是用户模式
-		ULONG offsetPreMode = 0;
-		PUCHAR retPos = (PUCHAR)ExGetPreviousMode();
-		while (*retPos != 0xC3)  // ret
-		{
-			retPos++;
-		}
-		offsetPreMode = *(ULONG*)(retPos - 4);
-		KPROCESSOR_MODE origiMode = ExGetPreviousMode();
-		*(KPROCESSOR_MODE*)((UCHAR*)PsGetCurrentThread() + offsetPreMode) = UserMode;
-
-		// 修改页面属性
-		ULONG tmpProtect = 0;
-		SIZE_T size = spaceSize;
-		PVOID pageStart = (PVOID)(((ULONG64)address >> 12) << 12);
-		__try
-		{
-			stus = ZwProtectVirtualMemory(NtCurrentProcess(), &pageStart, &size, newProtect, &tmpProtect);
-			if (NT_SUCCESS(stus) && tmpProtect != NULL)
-			{
-				// tmpProtect倒一手兼容写拷贝
-				*oldProtect = tmpProtect;
-			}
-		}
-		__except (1) { stus = STATUS_ACCESS_VIOLATION; }
-
-		// 还原当前线程的先前模式
-		*(KPROCESSOR_MODE*)((UCHAR*)PsGetCurrentThread() + offsetPreMode) = origiMode;
-	}
-	return stus;
-}
-
-/// <summary>
-/// 内存是否是安全的,通过是否有物理内存判断
-/// </summary>
+// 内存是否是安全的,通过是否有物理内存判断
 BOOLEAN MmIsAddressSafe(PVOID startAddress)
 {
 	
 	return FALSE;
 }
 
-/// <summary>
-/// 分割字符串
-/// </summary>
-VOID RtlSplitString(PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fileName)
+// 分割字符串
+VOID RtlSplitString(IN PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fileName)
 {
 	PWCHAR pathBuffer = fullPath->Buffer;
 	int len = wcslen(pathBuffer) - 1;
@@ -239,9 +160,7 @@ VOID RtlSplitString(PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR fi
 	}
 }
 
-/// <summary>
-/// 从字符串中删除所有字符子串 双指针实现
-/// </summary>
+// 从字符串中删除所有字符子串 双指针实现
 VOID RtlDelSubStr(PWCHAR str, const PWCHAR subStr)
 {
 	PWCHAR readPos = str;
@@ -267,19 +186,15 @@ VOID RtlDelSubStr(PWCHAR str, const PWCHAR subStr)
 	return;
 }
 
-/// <summary>
-/// 得到系统版本信息
-/// </summary>
-BOOLEAN RtlGetVersionInfo(RTL_OSVERSIONINFOEXW* info)
+// 得到系统版本信息
+BOOLEAN RtlGetVersionInfo(OUT RTL_OSVERSIONINFOEXW* info)
 {
 	RtlZeroMemory(info, sizeof(info));
 	info->dwOSVersionInfoSize = sizeof(info);
 	return NT_SUCCESS(RtlGetVersion((RTL_OSVERSIONINFOW*)(info)));
 }
 
-/// <summary>
-/// 得到具体的系统版本
-/// </summary>
+// 得到具体的系统版本
 OS_VERSION RtlGetOsVersion()
 {
 	RTL_OSVERSIONINFOEXW info;
@@ -344,9 +259,7 @@ OS_VERSION RtlGetOsVersion()
 	return OS_UNKNOWN;
 }
 
-/// <summary>
-/// 过回调验证，注册回调的API会调用MmVerifyCallbackFunction来检查驱动签名
-/// </summary>
+// 过回调验证，注册回调的API会调用MmVerifyCallbackFunction来检查驱动签名
 ULONG RtlByPassCallBackVerify(PVOID ldr)
 {
 	ULONG originFlags = ((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags;
@@ -354,18 +267,14 @@ ULONG RtlByPassCallBackVerify(PVOID ldr)
 	return originFlags;
 }
 
-/// <summary>
-/// 恢复回调验证
-/// </summary>
+// 恢复回调验证
 VOID RtlResetCallBackVerify(PVOID ldr, ULONG oldFlags)
 {
 	((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags = oldFlags;
 }
 
-/// <summary>
-/// 得到内核PE节的开始位置和结束位置
-/// </summary>
-NTSTATUS RtlFindImageSection(PVOID imageBase, CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd)
+// 得到内核PE节的开始位置和结束位置
+NTSTATUS RtlFindImageSection(IN PVOID imageBase, IN CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd)
 {
 	PIMAGE_NT_HEADERS ntHeaders = NULL;
 	// 因为此只用于内核文件的PE节查找,为64位操作系统
@@ -397,18 +306,14 @@ NTSTATUS RtlFindImageSection(PVOID imageBase, CHAR* sectionName, OUT PVOID* sect
 	return STATUS_INVALID_IMAGE_FORMAT;
 }
 
-/// <summary>
-/// 特征码搜索
-/// </summary>
+// 特征码搜索
 PVOID RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode)
 {
 
 	return NULL;
 }
 
-/// <summary>
-/// 线程延迟几秒  Sleep
-/// </summary>
+// 线程延迟几秒  Sleep
 NTSTATUS KeSleep(ULONG64 TimeOut)
 {
 	LARGE_INTEGER delayTime = { 0 };
@@ -417,9 +322,7 @@ NTSTATUS KeSleep(ULONG64 TimeOut)
 	return KeDelayExecutionThread(KernelMode, FALSE, &delayTime);
 }
 
-/// <summary>
-/// 通过pid判断是否是32位进程
-/// </summary>
+// 通过pid判断是否是32位进程
 BOOLEAN PsIsWow64Process(HANDLE processId)
 {
 	NTSTATUS status = STATUS_SUCCESS;
@@ -434,4 +337,154 @@ BOOLEAN PsIsWow64Process(HANDLE processId)
 		ObReferenceObject(eProcess);
 	}
 	return TRUE;
+}
+
+// 关写保护
+ULONG64 wpoff()
+{
+	_disable();
+	ULONG64 mcr0 = __readcr0();
+	__writecr0(mcr0 & (~0x10000));
+	return mcr0;
+}
+
+// 开写保护
+VOID wpon(ULONG64 mcr0)
+{
+	__writecr0(mcr0);
+	_enable();
+}
+
+// mdl映射地址
+PVOID MdlMapMemory(OUT PMDL* mdl, IN PVOID tagAddress, IN SIZE_T mapSize, IN MODE preMode)
+{
+	PMDL pMdl = IoAllocateMdl(tagAddress, mapSize, FALSE, FALSE, NULL);
+	if (pMdl == NULL)
+	{
+		return NULL;
+	}
+	PVOID mapAddr = NULL;
+	BOOLEAN isLock = FALSE;
+	__try
+	{
+		MmProbeAndLockPages(pMdl, preMode, IoReadAccess);
+		isLock = TRUE;
+		mapAddr = MmMapLockedPagesSpecifyCache(pMdl, preMode, MmCached, NULL, FALSE, NormalPagePriority);
+	}
+	__except(1)
+	{
+		if (isLock)
+		{
+			MmUnlockPages(pMdl);
+		}
+		IoFreeMdl(pMdl);
+		return NULL;
+	}
+	*mdl = pMdl;
+	return mapAddr;
+}
+
+// mdl取消映射
+VOID MdlUnMapMemory(IN PMDL mdl, IN PVOID mapBase)
+{
+	if (mdl == NULL) return;
+	__try
+	{
+		MmUnmapLockedPages(mapBase, mdl);
+		MmUnlockPages(mdl);
+		IoFreeMdl(mdl);
+	}
+	__except (1)
+	{
+		return;
+	}
+}
+
+// MmCopyVirtualMemory接口封装一层,动态获取地址(过iat hook该api)
+NTSTATUS CT_MmCopyVirtualMemory(PEPROCESS SourceProcess, PVOID SourceAddress, PEPROCESS TargetProcess, PVOID TargetAddress, SIZE_T BufferSize, KPROCESSOR_MODE PreviousMode, PSIZE_T ReturnSize)
+{
+	typedef NTSTATUS(NTAPI* MmCopyVirtualMemoryPfn)(PEPROCESS, PVOID, PEPROCESS, PVOID, SIZE_T, KPROCESSOR_MODE, PSIZE_T);
+	static MmCopyVirtualMemoryPfn CopyPfn = NULL;
+	if (!CopyPfn)
+	{
+		WCHAR funcNameStr[] = { 'M','m','C','o','p','y','V','i','r','t','u','a','l','M', 'e','m','o','r','y', 0, 0 };
+		UNICODE_STRING uniFuncNameStr = { 0 };
+		RtlInitUnicodeString(&uniFuncNameStr, funcNameStr);
+		CopyPfn = MmGetSystemRoutineAddress(&uniFuncNameStr);
+	}
+	if (CopyPfn)
+	{
+		return CopyPfn(SourceProcess, SourceAddress, TargetProcess, TargetAddress, BufferSize, PreviousMode, ReturnSize);
+	}
+	return STATUS_NOT_IMPLEMENTED;
+}
+
+// 修改内存属性
+NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID address, IN SIZE_T spaceSize, IN ULONG newProtect, OUT ULONG* oldProtect)
+{
+	NTSTATUS stus = STATUS_UNSUCCESSFUL;
+	typedef NTSTATUS(NTAPI* ZwProtectVirtualMemoryPfn)(HANDLE, PVOID*, PSIZE_T, ULONG, PULONG);
+	static ZwProtectVirtualMemoryPfn ZwProtectVirtualMemory = NULL;
+	if (ZwProtectVirtualMemory == NULL)
+	{
+		WCHAR zwQuerySec[] = { 'Z','w','Q','u','e','r','y','S','e','c','t','i','o','n', 0, 0 };
+		WCHAR zwProtectVir[] = { 'Z','w','P','r','o','t','e','c','t','V','i','r','t','u','a','l','M','e','m','o','r','y', 0, 0 };
+		UNICODE_STRING uZwQuerySec = { 0 };
+		UNICODE_STRING uProtectVir = { 0 };
+		RtlInitUnicodeString(&uZwQuerySec, zwQuerySec);
+		RtlInitUnicodeString(&uProtectVir, zwProtectVir);
+
+		ZwProtectVirtualMemory = MmGetSystemRoutineAddress(&uProtectVir);
+		// win7 win8 win8.1未导出Protect函数,通过偏移量找
+		UCHAR* ZwQuerySection = (UCHAR*)MmGetSystemRoutineAddress(&uZwQuerySec);
+		if (ZwQuerySection)
+		{
+			for (size_t i = 5; i < 100; i++)
+			{
+				// i=5避免直接定位到ZwQuerySection函数头
+				// 48 8B C4 : Mov Rax,Rsp
+				if (*(ZwQuerySection - i - 0) == 0x48 && *(ZwQuerySection - i + 1) == 0x8B && *(ZwQuerySection - i + 2) == 0xC4)
+				{
+					(*(PVOID*)&ZwProtectVirtualMemory) = (ZwQuerySection - i - 0);
+					break;
+				}
+			}
+		}
+	}
+	if (ZwProtectVirtualMemory != NULL)
+	{
+		// 设置当前线程的先前模式是用户模式(能够被try捕获)
+		ULONG offsetPreMode = 0;
+		PUCHAR retPos = (PUCHAR)ExGetPreviousMode;
+		while (*retPos != 0xC3)  // ret
+		{
+			retPos++;
+		}
+		offsetPreMode = *(ULONG*)(retPos - 4);
+		KPROCESSOR_MODE origiMode = ExGetPreviousMode();
+		*(KPROCESSOR_MODE*)((UCHAR*)PsGetCurrentThread() + offsetPreMode) = UserMode;
+
+		// 修改页面属性
+		ULONG tmpProtect = 0;
+		SIZE_T size = spaceSize;
+		PVOID pageStart = (PVOID)(((ULONG64)address >> 12) << 12);
+		__try
+		{
+			// 不能直接传&address,因为API内部会改变address的值为页面开始位置,这样会修改address值
+			stus = ZwProtectVirtualMemory(NtCurrentProcess(), &pageStart, &size, newProtect, &tmpProtect);
+			if (NT_SUCCESS(stus) && tmpProtect != 0)
+			{
+				// tmpProtect倒一手兼容写拷贝
+				*oldProtect = tmpProtect;
+			}
+		}
+		__except (1) 
+		{ 
+			stus = STATUS_ACCESS_VIOLATION; 
+		}
+
+		// 还原当前线程的先前模式
+		*(KPROCESSOR_MODE*)((UCHAR*)PsGetCurrentThread() + offsetPreMode) = origiMode;
+	}
+	return stus;
 }

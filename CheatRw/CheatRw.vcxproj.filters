@@ -1,27 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="utils">
+      <UniqueIdentifier>{b62d495b-f152-48ac-b564-f98e0788c3ba}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
+    <Filter Include="head">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="utils">
-      <UniqueIdentifier>{b62d495b-f152-48ac-b564-f98e0788c3ba}</UniqueIdentifier>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GetModule.c">
-      <Filter>Source Files</Filter>
+      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="Main.c">
-      <Filter>Source Files</Filter>
+      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="Comm.c">
-      <Filter>Source Files</Filter>
+      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="SearchCode.c">
       <Filter>utils</Filter>
@@ -30,15 +30,15 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="ReadWrite.c">
-      <Filter>Source Files</Filter>
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GetModule.h">
-      <Filter>Header Files</Filter>
+      <Filter>head</Filter>
     </ClInclude>
     <ClInclude Include="Comm.h">
-      <Filter>Header Files</Filter>
+      <Filter>head</Filter>
     </ClInclude>
     <ClInclude Include="Unrevealed.h">
       <Filter>utils</Filter>
@@ -50,7 +50,7 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="ReadWrite.h">
-      <Filter>Header Files</Filter>
+      <Filter>head</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -5,7 +5,7 @@
 #define RW_STATUS_SUCCESS                   0x00000000L
 #define RW_STATUS_UNSUCCESSFUL              0xC0000001L
 #define RW_STATUS_COMMINITFAILURE           0xC0000002L
-#define STATUS_ACCESS_VIOLATION             0xC0000005L
+#define RW_STATUS_ACCESS_VIOLATION          0xC0000005L
 #define RW_STATUS_INVALID_CID               0xC000000BL
 #define RW_STATUS_INVALID_PARAMETER_1       0xC00000EFL
 #define RW_STATUS_INVALID_PARAMETER_2       0xC00000F0L
@@ -53,6 +53,13 @@ typedef struct _ReadMemInfo
     _In_  SIZE_T ReadSize;
 }ReadMemInfo, * PReadMemInfo;
 
+typedef struct _WriteMemInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 TagAddress;
+    _In_  ULONG64 WriteBuffer;
+    _In_  ULONG64 WriteSize;
+}WriteMemInfo, * PWriteMemInfo;
 
 //================ 未文档化结构 ======================
 //Win7 驱动通信
@@ -76,4 +83,5 @@ typedef ULONG(*NtQueryInformationFilePfn)(
 typedef ULONG64(_fastcall* NtConvertBetweenPfn)(char, PVOID, PVOID, PVOID);
 
 //================ 函数声明 ======================
+
 NTSTATUS SendCommPacket(ULONG cmd, PVOID inData, SIZE_T inSize);

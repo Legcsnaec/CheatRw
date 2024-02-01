@@ -39,7 +39,18 @@ typedef struct _ReadMemInfo
     _In_  SIZE_T ReadSize;
 }ReadMemInfo, * PReadMemInfo;
 
+typedef struct _WriteMemInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 TagAddress;
+    _In_  ULONG64 WriteBuffer;
+    _In_  ULONG64 WriteSize;
+}WriteMemInfo, * PWriteMemInfo;
+
+// 通信派遣
+typedef VOID(*DispatchCallEntryPfn)(PPACKET packet);
+
 //================ 函数声明 ======================
 
-NTSTATUS CommInitialize();	// 通信初始化-注册回调
+NTSTATUS CommInitialize(DispatchCallEntryPfn callBack);     // 通信初始化-注册回调
 VOID CommUninitialize(); 
