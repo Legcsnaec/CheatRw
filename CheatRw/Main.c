@@ -54,6 +54,20 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
+	case CMD_QueryMemory:
+	{
+		KdPrint(("[info]: Main_DispatchCallEntry -- 查询内存信息\r\n"));
+		PQueryMemInfo info = packet->Request;
+		if (info)
+		{
+			packet->ResponseCode = QueryMemory(info->Pid, info->BaseAddress, &info->MemBasicInfo);
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
+		break;
+	}
 	default:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 无效的通信ID\r\n"));

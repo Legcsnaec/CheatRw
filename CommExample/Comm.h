@@ -20,7 +20,7 @@ typedef enum _COMM_NUMBER
     CMD_DriverRead,
     CMD_DriverWrite,
     CMD_GetModuleR3,
-    CMD_GetMMType,
+    CMD_QueryMemory,
     CMD_InstallProtect,
     CMD_UninstallProtect,
     CMD_RemoteCall,
@@ -60,6 +60,24 @@ typedef struct _WriteMemInfo
     _In_  ULONG64 WriteBuffer;
     _In_  ULONG64 WriteSize;
 }WriteMemInfo, * PWriteMemInfo;
+
+//自定义内存信息结构
+typedef struct _MYMEMORY_BASIC_INFORMATION {
+    ULONG64 BaseAddress;
+    ULONG64 AllocationBase;
+    ULONG64 AllocationProtect;
+    ULONG64 RegionSize;
+    ULONG64 State;
+    ULONG64 Protect;
+    ULONG64 Type;
+} MYMEMORY_BASIC_INFORMATION, * PMYMEMORY_BASIC_INFORMATION;
+
+typedef struct _QueryMemInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 BaseAddress;
+    _Out_ MYMEMORY_BASIC_INFORMATION MemBasicInfo;
+}QueryMemInfo, * PQueryMemInfo;
 
 //================ 未文档化结构 ======================
 //Win7 驱动通信

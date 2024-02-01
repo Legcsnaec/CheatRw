@@ -8,7 +8,7 @@ typedef enum _COMM_NUMBER
     CMD_DriverRead,
     CMD_DriverWrite,
     CMD_GetModuleR3,
-    CMD_GetMMType,
+    CMD_QueryMemory,
     CMD_InstallProtect,
     CMD_UninstallProtect,
     CMD_RemoteCall
@@ -46,6 +46,14 @@ typedef struct _WriteMemInfo
     _In_  ULONG64 WriteBuffer;
     _In_  ULONG64 WriteSize;
 }WriteMemInfo, * PWriteMemInfo;
+
+typedef struct _QueryMemInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 BaseAddress;
+    _Out_ MYMEMORY_BASIC_INFORMATION MemBasicInfo;
+}QueryMemInfo, * PQueryMemInfo;
+
 
 // Õ®–≈≈…«≤
 typedef VOID(*DispatchCallEntryPfn)(PPACKET packet);

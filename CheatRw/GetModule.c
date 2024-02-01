@@ -57,10 +57,8 @@ ULONG_PTR GetModuleX64(PEPROCESS Process, PPEB peb64, PUNICODE_STRING moudleName
 	return retBase;
 }
 
-/// <summary>
-/// 得到模块地址
-/// </summary>
-ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG64 sizeImage)
+// 得到模块地址
+ULONG64 GetModuleR3(IN HANDLE pid, IN char* moduleName, OUT PULONG64 sizeImage)
 {
 	if (moduleName == 0) return 0;
 
@@ -77,7 +75,7 @@ ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG64 sizeImage)
 	if(!NT_SUCCESS(stus)) return 0;
 	_wcslwr_s(uniModuleame.Buffer, uniModuleame.Length);
 
-	ULONG_PTR module = 0;
+	ULONG64 module = 0;
 	KAPC_STATE apcStus = { 0 };
 	KeStackAttachProcess(eProcess, &apcStus);
 	PPEB peb64 = (PPEB)PsGetProcessPeb(eProcess);
@@ -95,4 +93,41 @@ ULONG_PTR GetModuleR3(HANDLE pid, char* moduleName, PULONG64 sizeImage)
 	KeUnstackDetachProcess(&apcStus);
 	RtlFreeUnicodeString(&uniModuleame);
 	return module;
+}
+
+// 查询内存属性
+NTSTATUS QueryMemory(IN HANDLE pid, IN ULONG64 baseAddress, OUT PMYMEMORY_BASIC_INFORMATION pInfomation)
+{
+	NTSTATUS stat = STATUS_UNSUCCESSFUL;
+	if (pInfomation == NULL)
+	{
+		return stat;
+	}
+	
+	PEPROCESS eprocess = NULL;
+	stat = PsLookupProcessByProcessId(pid, &eprocess);
+	if (!NT_SUCCESS(stat))
+	{
+		return stat;
+	}
+
+	SIZE_T retSize = 0;
+	KAPC_STATE apcStat = { 0 };
+	MEMORY_BASIC_INFORMATION basicInfo = { 0 };
+	KeStackAttachProcess(eprocess, &apcStat);
+	stat = ZwQueryVirtualMemory(NtCurrentProcess(), baseAddress, MemoryBasicInformation, &basicInfo, sizeof(MEMORY_BASIC_INFORMATION), &retSize);
+	KeUnstackDetachProcess(&apcStat);
+	if (NT_SUCCESS(stat))
+	{
+		pInfomation->AllocationProtect = basicInfo.AllocationProtect;
+		pInfomation->AllocationBase = basicInfo.AllocationBase;
+		pInfomation->BaseAddress = basicInfo.BaseAddress;
+		pInfomation->RegionSize = basicInfo.RegionSize;
+		pInfomation->Protect = basicInfo.Protect;
+		pInfomation->State = basicInfo.State;
+		pInfomation->Type = basicInfo.Type;
+	}
+
+	ObDereferenceObject(eprocess);
+	return stat;
 }

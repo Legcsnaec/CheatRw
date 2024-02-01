@@ -40,6 +40,18 @@ int main()
 	stat = SendCommPacket(CMD_DriverWrite, &data2, sizeof(WriteMemInfo));
 	printf("stat:%x\n", stat);
 
+	QueryMemInfo data3 = { 0 };
+	data3.Pid = 4584;
+	data3.BaseAddress = 0x2e10010;
+
+	stat = SendCommPacket(CMD_QueryMemory, &data3, sizeof(QueryMemInfo));
+	printf("stat:%x   AllocationBase:%llx   AllocationProtect:%llx   Protect:%llx   \n",
+		stat, data3.MemBasicInfo.AllocationBase, data3.MemBasicInfo.AllocationProtect, data3.MemBasicInfo.Protect);
+
+
+
+
+
 	system("pause");
 	return 0;
 }
