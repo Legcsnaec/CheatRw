@@ -1,5 +1,7 @@
 #pragma once
 #include "Unrevealed.h"
 
-VOID UninstallProtect();
-NTSTATUS InstallProtect(HANDLE pid);
+VOID SetProtectPid(HANDLE pid);
+
+VOID DestoryCallback();
+NTSTATUS RegisterCallback();

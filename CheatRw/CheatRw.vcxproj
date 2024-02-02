@@ -178,6 +178,7 @@
     <ClCompile Include="GetModule.c" />
     <ClCompile Include="ProtectHandle.c" />
     <ClCompile Include="ReadWrite.c" />
+    <ClCompile Include="RemoteCall.c" />
     <ClCompile Include="SearchCode.c" />
   </ItemGroup>
   <ItemGroup>
@@ -186,6 +187,7 @@
     <ClInclude Include="GetModule.h" />
     <ClInclude Include="ProtectHandle.h" />
     <ClInclude Include="ReadWrite.h" />
+    <ClInclude Include="RemoteCall.h" />
     <ClInclude Include="SearchCode.h" />
     <ClInclude Include="Unrevealed.h" />
   </ItemGroup>

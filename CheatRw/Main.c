@@ -4,6 +4,7 @@
 #include "ReadWrite.h"
 #include "CheatTools.h"
 #include "ProtectHandle.h"
+#include "RemoteCall.h"
 
 // 功能调度函数
 VOID DispatchCallEntry(PPACKET packet)
@@ -78,11 +79,12 @@ VOID DispatchCallEntry(PPACKET packet)
 		{
 			if (info->IsInstall == TRUE)
 			{
-				packet->ResponseCode = InstallProtect(info->Pid);
+				SetProtectPid(info->Pid);
+				packet->ResponseCode = STATUS_SUCCESS;
 			}
 			else
 			{
-				UninstallProtect();
+				SetProtectPid(NULL);
 				packet->ResponseCode = STATUS_SUCCESS;
 			}
 		}
@@ -100,18 +102,13 @@ VOID DispatchCallEntry(PPACKET packet)
 	}
 }
 
-VOID CleanUpEnvironment()
-{
-	UninstallProtect();
-}
-
 VOID DriverUnload(PDRIVER_OBJECT pDrv)
 {
 	UNREFERENCED_PARAMETER(pDrv);
 	
 	CommUninitialize();
 
-	CleanUpEnvironment();
+	DestoryCallback();
 
 	DbgPrint("unload ... \n\r");
 }
@@ -119,14 +116,22 @@ VOID DriverUnload(PDRIVER_OBJECT pDrv)
 NTSTATUS DriverEntry(PDRIVER_OBJECT pDrv, PUNICODE_STRING pReg)
 {
 	UNREFERENCED_PARAMETER(pReg);
-
-	RtlByPassCallBackVerify(pDrv->DriverSection);
-
 	NTSTATUS stat = STATUS_SUCCESS;
 
 	stat = CommInitialize(DispatchCallEntry);
+	if (!NT_SUCCESS(stat))
+	{
+		goto end;
+	}
 
+	RtlByPassCallBackVerify(pDrv->DriverSection);
+	stat = RegisterCallback();
+	if (!NT_SUCCESS(stat))
+	{
+		goto end;
+	}
+
+end:
 	pDrv->DriverUnload = DriverUnload;
-	
 	return stat;
 }

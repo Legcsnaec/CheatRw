@@ -1,10 +1,11 @@
 #include "CheatTools.h"
 #include "Unrevealed.h"
+#include "SearchCode.h"
 
 // 64\32位版本,根据基址和名称得到函数地址,导出表解析
 PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 {
-	if (modBase == NULL || searchFnName == NULL)  return NULL;
+	if (modBase == 0 || searchFnName == NULL)  return NULL;
 	SIZE_T funcAddr = 0;
 
 	do
@@ -42,7 +43,7 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 				{
 					if (!_strnicmp(searchFnName, funcName, strlen(searchFnName)))
 					{
-						if (funcName[strlen(searchFnName)] == NULL)
+						if (funcName[strlen(searchFnName)] == 0)
 						{
 							funcOrdinal = pExportTable->Base + pAddrNameOrdinals[i] - 1;
 							funcAddr = modBase + pAddrFns[funcOrdinal];
@@ -59,7 +60,7 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 				{
 					if (!_strnicmp(searchFnName, funcName, strlen(searchFnName)))
 					{
-						if (funcName[strlen(searchFnName)] == NULL)
+						if (funcName[strlen(searchFnName)] == 0)
 						{
 							funcOrdinal = pExportTable->Base + pAddrNameOrdinals[i] - 1;
 							funcAddr = modBase + pAddrFns[funcOrdinal];
@@ -90,7 +91,7 @@ PVOID MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG 
 	}
 	__try 
 	{
-		RtlAllocateVirtualMemory(processHandle, &Result, NULL, &allocSize, allcType, protect);
+		RtlAllocateVirtualMemory(processHandle, &Result, 0, &allocSize, allcType, protect);
 	}
 	__except (1) { Result = NULL; }
 	return Result;
@@ -359,7 +360,7 @@ VOID wpon(ULONG64 mcr0)
 }
 
 // mdl映射地址
-PVOID MdlMapMemory(OUT PMDL* mdl, IN PVOID tagAddress, IN SIZE_T mapSize, IN MODE preMode)
+PVOID MdlMapMemory(OUT PMDL* mdl, IN PVOID tagAddress, IN ULONG mapSize, IN MODE preMode)
 {
 	PMDL pMdl = IoAllocateMdl(tagAddress, mapSize, FALSE, FALSE, NULL);
 	if (pMdl == NULL)
@@ -421,6 +422,33 @@ NTSTATUS GetDriverObjectByName(IN PWCH driverName, OUT PDRIVER_OBJECT* driver)
 		ObDereferenceObject(drv);
 	}
 	return STATUS_SUCCESS;
+}
+
+// 得到进程的主线程
+NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* pEthread)
+{
+	if (eprocess == NULL || pEthread == NULL)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	NTSTATUS stat = STATUS_UNSUCCESSFUL;
+	KAPC_STATE apcStat = { 0 };
+	HANDLE thread = NULL;
+	PETHREAD ethread = NULL;
+
+	KeStackAttachProcess(eprocess, &apcStat);
+	stat = CT_ZwGetNextThread(NtCurrentProcess(), NULL, THREAD_ALL_ACCESS, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, 0, &thread);
+	if (NT_SUCCESS(stat))
+	{
+		// 获取线程对象
+		stat = ObReferenceObjectByHandle(thread, THREAD_ALL_ACCESS, *PsThreadType, KernelMode, &ethread, NULL);
+		NtClose(thread);
+	}
+	KeUnstackDetachProcess(&apcStat);
+
+	*pEthread = ethread;
+	return stat;
 }
 
 //  ---------------------  接口设计  --------------------- 
@@ -517,14 +545,14 @@ NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID Address, IN SIZE_T SpaceSize, IN ULO
 // 过签名验证的回调注册
 NTSTATUS CT_ObRegisterCallbacks(IN POB_CALLBACK_REGISTRATION CallbackRegistration, OUT PVOID* RegistrationHandle)
 {
-	NTSTATUS stat = STATUS_UNSUCCESSFUL;
 	PCHAR MmVerifyPfn = NULL;
 	RTL_OSVERSIONINFOW version = { 0 };
-	stat = RtlGetVersion(&version);
+	NTSTATUS stat = RtlGetVersion(&version);
 	if (!NT_SUCCESS(stat))
 	{
 		return stat;
 	}
+	stat = STATUS_UNSUCCESSFUL;
 
 	// 找到对应系统的MmVerifyFun地址
 	PUCHAR ObRegisterPfn = (PUCHAR)ObRegisterCallbacks;
@@ -546,6 +574,7 @@ NTSTATUS CT_ObRegisterCallbacks(IN POB_CALLBACK_REGISTRATION CallbackRegistratio
 	{
 		for (int i = 0; i < 0x500; i++)
 		{
+			// 其他win10系统基本通用,找不到再去ida对应系统找
 			// mov xxxx   call xxxx   test eax,eax
 			if (ObRegisterPfn[i] == 0xBA && ObRegisterPfn[i + 5] == 0xe8 && ObRegisterPfn[i + 10] == 0x85 && ObRegisterPfn[i + 11] == 0xc0)
 			{
@@ -564,7 +593,6 @@ NTSTATUS CT_ObRegisterCallbacks(IN POB_CALLBACK_REGISTRATION CallbackRegistratio
 		// 直接映射一份物理地址再写
 		// (PS：内核中代码段只读,映射一份地址默认可读写)
 		PHYSICAL_ADDRESS phyAddress = MmGetPhysicalAddress(MmVerifyPfn);
-		DbgBreakPoint();
 		PVOID memMap = MmMapIoSpace(phyAddress, 10, MmNonCached);
 		if (memMap)
 		{
@@ -577,4 +605,109 @@ NTSTATUS CT_ObRegisterCallbacks(IN POB_CALLBACK_REGISTRATION CallbackRegistratio
 		}
 	}
 	return stat;
+}
+
+// 获取当前线程的下一线程,如果当前线程为NULL则获取主线程
+NTSTATUS CT_ZwGetNextThread(IN HANDLE ProcessHandle, IN HANDLE ThreadHandle, IN ACCESS_MASK DesiredAccess, IN ULONG HandleAttributes, IN ULONG Flags, OUT PHANDLE NewThreadHandle)
+{
+	NTSTATUS stat = STATUS_UNSUCCESSFUL;
+	typedef NTSTATUS(NTAPI* ZwGetNextThreadPfn)(HANDLE, HANDLE, ACCESS_MASK, ULONG, ULONG, PHANDLE);
+	static ZwGetNextThreadPfn ZwGetNextThreadFunc = NULL;
+	if (!ZwGetNextThreadFunc)
+	{
+		WCHAR zwGetNextThread[] = { 'Z','w','G','e','t','N','e','x','t','T','h','r','e','a', 'd', 0, 0 };
+		UNICODE_STRING unZeGetNextThread = { 0 };
+		RtlInitUnicodeString(&unZeGetNextThread, zwGetNextThread);
+		ZwGetNextThreadFunc = MmGetSystemRoutineAddress(&unZeGetNextThread);
+		if(ZwGetNextThreadFunc == NULL)
+		{
+			// Win7未导出,其他函数定位
+			UNICODE_STRING unName = { 0 };
+			RtlInitUnicodeString(&unName, L"ZwGetNotificationResourceManager");
+			PUCHAR ZwGetNotificationResourceManagerAddr = (PUCHAR)MmGetSystemRoutineAddress(&unName);
+			ZwGetNotificationResourceManagerAddr -= 0x50;
+			for (int i = 0; i < 0x30; i++)
+			{
+				if (ZwGetNotificationResourceManagerAddr[i] == 0x48
+					&& ZwGetNotificationResourceManagerAddr[i + 1] == 0x8B
+					&& ZwGetNotificationResourceManagerAddr[i + 2] == 0xC4)
+				{
+					ZwGetNextThreadFunc = ZwGetNotificationResourceManagerAddr + i;
+					break;
+				}
+			}
+		}
+	}
+	if (ZwGetNextThreadFunc)
+	{
+		stat = ZwGetNextThreadFunc(ProcessHandle, ThreadHandle, DesiredAccess, HandleAttributes, Flags, NewThreadHandle);
+	}
+	return stat;
+}
+
+// 线程挂起 未导出
+NTSTATUS CT_PsSuspendThread(IN PETHREAD Thread, OUT PULONG PreviousSuspendCount OPTIONAL)
+{
+	typedef NTSTATUS(NTAPI* PsSuspendThreadPfn)(IN PETHREAD Thread, OUT PULONG PreviousSuspendCount OPTIONAL);
+	static PsSuspendThreadPfn PsSuspendThreadFunc = NULL;
+
+	if (!PsSuspendThreadFunc)
+	{
+		RTL_OSVERSIONINFOW version = { 0 };
+		NTSTATUS stat = RtlGetVersion(&version);
+		if (!NT_SUCCESS(stat))
+		{
+			return stat;
+		}
+		if (version.dwBuildNumber == 7600 || version.dwBuildNumber == 7601)
+		{
+			// Win7
+			PsSuspendThreadFunc = (PsSuspendThreadPfn)SearchCode("ntoskrnl.exe", "PAGE", "4C8BEA488BF133FF897C**65********4C89******6641*******48******0F**488B01", -0x15llu);
+		}
+		else
+		{
+			// 其他版本也可能不一样,找不到再ida去对应系统版本上找 
+			// Win10 19044特征
+			PsSuspendThreadFunc = (PsSuspendThreadPfn)SearchCode("ntoskrnl.exe", "PAGE", "535657415641574883ec304c8bf2488bf9836424200065488b3425880100004889742470", -0xallu);
+		}
+	}
+	if (PsSuspendThreadFunc)
+	{
+		return PsSuspendThreadFunc(Thread, PreviousSuspendCount);
+	}
+	return STATUS_NOT_IMPLEMENTED;
+}
+
+// 线程恢复 未导出
+NTSTATUS CT_PsResumeThread(IN PETHREAD Thread, OUT PULONG PreviousSuspendCount OPTIONAL)
+{
+	typedef NTSTATUS(NTAPI* PsResumeThreadPfn)(IN PETHREAD Thread, OUT PULONG PreviousSuspendCount OPTIONAL);
+	static PsResumeThreadPfn PsResumeThreadFunc = NULL;
+
+	if (!PsResumeThreadFunc)
+	{
+		RTL_OSVERSIONINFOW version = { 0 };
+		NTSTATUS stat = RtlGetVersion(&version);
+		if (!NT_SUCCESS(stat))
+		{
+			return stat;
+		}
+		if (version.dwBuildNumber == 7600 || version.dwBuildNumber == 7601)
+		{
+			// Win7
+			PsResumeThreadFunc = (PsResumeThreadPfn)SearchCode("ntoskrnl.exe", "PAGE", "405348***488BDAE8****4885DB74*890333C048***5BC3", 0);
+		}
+		else
+		{
+			// 其他版本也可能不一样,找不到再ida去对应系统版本上找
+			// Win10 19044特征
+			PsResumeThreadFunc = (PsResumeThreadPfn)SearchCode("ntoskrnl.exe", "PAGE", "4c8b8720020000b800800000418b887c08000085c8", -0x2allu);
+		}
+	
+	}
+	if (PsResumeThreadFunc)
+	{
+		return PsResumeThreadFunc(Thread, PreviousSuspendCount);
+	}
+	return STATUS_NOT_IMPLEMENTED;
 }

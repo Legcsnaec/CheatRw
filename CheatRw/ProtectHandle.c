@@ -8,6 +8,11 @@
 PVOID RegCallbackHandle = NULL;
 HANDLE ProtectProcessPid = NULL;
 
+VOID SetProtectPid(HANDLE pid)
+{
+	ProtectProcessPid = pid;
+}
+
 OB_PREOP_CALLBACK_STATUS PobPreOperationCallback(PVOID RegistrationContext, POB_PRE_OPERATION_INFORMATION OperationInformation)
 {
 	PEPROCESS eprocess = OperationInformation->Object;
@@ -43,18 +48,12 @@ OB_PREOP_CALLBACK_STATUS PobPreOperationCallback(PVOID RegistrationContext, POB_
 	return OB_PREOP_SUCCESS;
 }
 
-NTSTATUS InstallProtect(HANDLE pid)
+NTSTATUS RegisterCallback()
 {
-	if (pid == NULL)
-	{
-		return STATUS_INVALID_PARAMETER_1;
-	}
 	if (RegCallbackHandle != NULL)
 	{
 		return STATUS_UNSUCCESSFUL;
 	}
-
-	ProtectProcessPid = pid;
 
 	// 找到ntoskrnl下的跳板指令地址
 	ULONG64 jmpRcx = SearchCode("ntoskrnl.exe", ".text", JMP_RCX, 0);
@@ -81,7 +80,7 @@ NTSTATUS InstallProtect(HANDLE pid)
 	return CT_ObRegisterCallbacks(&obCallRegster, &RegCallbackHandle);
 }
 
-VOID UninstallProtect()
+VOID DestoryCallback()
 {
 	// 取消句柄回调
 	if (RegCallbackHandle)

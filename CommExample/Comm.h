@@ -2,9 +2,10 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#define RW_STATUS_COMMINITFAILURE           0xC0000111L
 #define RW_STATUS_SUCCESS                   0x00000000L
 #define RW_STATUS_UNSUCCESSFUL              0xC0000001L
-#define RW_STATUS_COMMINITFAILURE           0xC0000002L
+#define RW_STATUS_NOT_IMPLEMENTED           0xC0000002L
 #define RW_STATUS_ACCESS_VIOLATION          0xC0000005L
 #define RW_STATUS_INVALID_CID               0xC000000BL
 #define RW_STATUS_ACCESS_DENIED             0xC0000022L
