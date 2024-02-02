@@ -260,6 +260,7 @@ OS_VERSION RtlGetOsVersion()
 }
 
 // 过回调验证，注册回调的API会调用MmVerifyCallbackFunction来检查驱动签名
+// 还不还原都无所谓
 ULONG RtlByPassCallBackVerify(PVOID ldr)
 {
 	ULONG originFlags = ((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags;
@@ -345,12 +346,14 @@ ULONG64 wpoff()
 	_disable();
 	ULONG64 mcr0 = __readcr0();
 	__writecr0(mcr0 & (~0x10000));
-	return mcr0;
+	_enable();
+	return  mcr0;
 }
 
 // 开写保护
 VOID wpon(ULONG64 mcr0)
 {
+	_disable();
 	__writecr0(mcr0);
 	_enable();
 }
@@ -400,6 +403,28 @@ VOID MdlUnMapMemory(IN PMDL mdl, IN PVOID mapBase)
 	}
 }
 
+// 通过驱动名得到驱动对象
+NTSTATUS GetDriverObjectByName(IN PWCH driverName, OUT PDRIVER_OBJECT* driver)
+{
+	if (driverName == NULL || driver == NULL)
+	{
+		return STATUS_UNSUCCESSFUL;
+	}
+
+	UNICODE_STRING drvNameUnStr = { 0 };
+	RtlInitUnicodeString(&drvNameUnStr, driverName);
+	PDRIVER_OBJECT drv = NULL;
+	NTSTATUS stat = ObReferenceObjectByName(&drvNameUnStr, FILE_ALL_ACCESS, 0, 0, *IoDriverObjectType, KernelMode, NULL, &drv);
+	if (NT_SUCCESS(stat))
+	{
+		*driver = drv;
+		ObDereferenceObject(drv);
+	}
+	return STATUS_SUCCESS;
+}
+
+//  ---------------------  接口设计  --------------------- 
+// 
 // MmCopyVirtualMemory接口封装一层,动态获取地址(过iat hook该api)
 NTSTATUS CT_MmCopyVirtualMemory(PEPROCESS SourceProcess, PVOID SourceAddress, PEPROCESS TargetProcess, PVOID TargetAddress, SIZE_T BufferSize, KPROCESSOR_MODE PreviousMode, PSIZE_T ReturnSize)
 {
@@ -420,7 +445,7 @@ NTSTATUS CT_MmCopyVirtualMemory(PEPROCESS SourceProcess, PVOID SourceAddress, PE
 }
 
 // 修改内存属性
-NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID address, IN SIZE_T spaceSize, IN ULONG newProtect, OUT ULONG* oldProtect)
+NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID Address, IN SIZE_T SpaceSize, IN ULONG NewProtect, OUT ULONG* OldProtect)
 {
 	NTSTATUS stus = STATUS_UNSUCCESSFUL;
 	typedef NTSTATUS(NTAPI* ZwProtectVirtualMemoryPfn)(HANDLE, PVOID*, PSIZE_T, ULONG, PULONG);
@@ -466,16 +491,16 @@ NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID address, IN SIZE_T spaceSize, IN ULO
 
 		// 修改页面属性
 		ULONG tmpProtect = 0;
-		SIZE_T size = spaceSize;
-		PVOID pageStart = (PVOID)(((ULONG64)address >> 12) << 12);
+		SIZE_T size = SpaceSize;
+		PVOID pageStart = (PVOID)(((ULONG64)Address >> 12) << 12);
 		__try
 		{
 			// 不能直接传&address,因为API内部会改变address的值为页面开始位置,这样会修改address值
-			stus = ZwProtectVirtualMemory(NtCurrentProcess(), &pageStart, &size, newProtect, &tmpProtect);
+			stus = ZwProtectVirtualMemory(NtCurrentProcess(), &pageStart, &size, NewProtect, &tmpProtect);
 			if (NT_SUCCESS(stus) && tmpProtect != 0)
 			{
 				// tmpProtect倒一手兼容写拷贝
-				*oldProtect = tmpProtect;
+				*OldProtect = tmpProtect;
 			}
 		}
 		__except (1) 
@@ -487,4 +512,69 @@ NTSTATUS CT_ZwProtectVirtualMemory(IN PVOID address, IN SIZE_T spaceSize, IN ULO
 		*(KPROCESSOR_MODE*)((UCHAR*)PsGetCurrentThread() + offsetPreMode) = origiMode;
 	}
 	return stus;
+}
+
+// 过签名验证的回调注册
+NTSTATUS CT_ObRegisterCallbacks(IN POB_CALLBACK_REGISTRATION CallbackRegistration, OUT PVOID* RegistrationHandle)
+{
+	NTSTATUS stat = STATUS_UNSUCCESSFUL;
+	PCHAR MmVerifyPfn = NULL;
+	RTL_OSVERSIONINFOW version = { 0 };
+	stat = RtlGetVersion(&version);
+	if (!NT_SUCCESS(stat))
+	{
+		return stat;
+	}
+
+	// 找到对应系统的MmVerifyFun地址
+	PUCHAR ObRegisterPfn = (PUCHAR)ObRegisterCallbacks;
+	if (version.dwBuildNumber == 7600 || version.dwBuildNumber == 7601)
+	{
+		for (int i = 0; i < 0x500; i++)
+		{
+			if (ObRegisterPfn[i] == 0x74 && ObRegisterPfn[i + 2] == 0xe8 && ObRegisterPfn[i + 7] == 0x3b && ObRegisterPfn[i + 8] == 0xc3)
+			{
+				LARGE_INTEGER larger;
+				larger.QuadPart = ObRegisterPfn + i + 7;
+				larger.LowPart += *(PULONG)(ObRegisterPfn + i + 3);
+				MmVerifyPfn = larger.QuadPart;
+				break;
+			}
+		}
+	}
+	else
+	{
+		for (int i = 0; i < 0x500; i++)
+		{
+			// mov xxxx   call xxxx   test eax,eax
+			if (ObRegisterPfn[i] == 0xBA && ObRegisterPfn[i + 5] == 0xe8 && ObRegisterPfn[i + 10] == 0x85 && ObRegisterPfn[i + 11] == 0xc0)
+			{
+				LARGE_INTEGER larger;
+				larger.QuadPart = ObRegisterPfn + i + 10;			// 下一行地址
+				larger.LowPart += *(PULONG)(ObRegisterPfn + i + 6);	// offset
+				MmVerifyPfn = larger.QuadPart;						// 函数地址
+				break;
+			}
+		}
+	}
+
+	// 直接修改硬编码打补丁过验证并注册回调
+	if (MmVerifyPfn)
+	{
+		// 直接映射一份物理地址再写
+		// (PS：内核中代码段只读,映射一份地址默认可读写)
+		PHYSICAL_ADDRESS phyAddress = MmGetPhysicalAddress(MmVerifyPfn);
+		DbgBreakPoint();
+		PVOID memMap = MmMapIoSpace(phyAddress, 10, MmNonCached);
+		if (memMap)
+		{
+			UCHAR oldCode[10] = { 0 };
+			UCHAR patch[] = { 0xb0,0x1,0xc3 };
+			memcpy(oldCode, memMap, 10);
+			memcpy(memMap, patch, sizeof(patch));
+			stat = ObRegisterCallbacks(CallbackRegistration, RegistrationHandle);
+			memcpy(memMap, oldCode, 10);
+		}
+	}
+	return stat;
 }

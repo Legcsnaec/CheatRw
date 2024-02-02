@@ -7,10 +7,12 @@
 #define RW_STATUS_COMMINITFAILURE           0xC0000002L
 #define RW_STATUS_ACCESS_VIOLATION          0xC0000005L
 #define RW_STATUS_INVALID_CID               0xC000000BL
+#define RW_STATUS_ACCESS_DENIED             0xC0000022L
 #define RW_STATUS_INVALID_PARAMETER_1       0xC00000EFL
 #define RW_STATUS_INVALID_PARAMETER_2       0xC00000F0L
 #define RW_STATUS_INVALID_PARAMETER_3       0xC00000F1L
 #define RW_STATUS_INVALID_ADDRESS           0xC0000141L
+#define RW_STATUS_PARTIAL_COPY              0x8000000DL
 #define RW_STATUS_INVALID_PARAMETER         STATUS_INVALID_PARAMETER
 
 //================ 通信约定 ====================
@@ -21,8 +23,7 @@ typedef enum _COMM_NUMBER
     CMD_DriverWrite,
     CMD_GetModuleR3,
     CMD_QueryMemory,
-    CMD_InstallProtect,
-    CMD_UninstallProtect,
+    CMD_ProtectHandle,
     CMD_RemoteCall,
     COMM_NUMBER_SIZE
 }COMM_NUMBER;
@@ -78,6 +79,12 @@ typedef struct _QueryMemInfo
     _In_  ULONG64 BaseAddress;
     _Out_ MYMEMORY_BASIC_INFORMATION MemBasicInfo;
 }QueryMemInfo, * PQueryMemInfo;
+
+typedef struct _ProtectHandleInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  BOOLEAN IsInstall;
+}ProtectHandleInfo, * PProtectHandleInfo;
 
 //================ 未文档化结构 ======================
 //Win7 驱动通信

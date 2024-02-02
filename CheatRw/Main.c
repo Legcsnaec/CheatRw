@@ -2,6 +2,8 @@
 #include "Comm.h"
 #include "GetModule.h"
 #include "ReadWrite.h"
+#include "CheatTools.h"
+#include "ProtectHandle.h"
 
 // 功能调度函数
 VOID DispatchCallEntry(PPACKET packet)
@@ -56,11 +58,33 @@ VOID DispatchCallEntry(PPACKET packet)
 	}
 	case CMD_QueryMemory:
 	{
-		KdPrint(("[info]: Main_DispatchCallEntry -- 查询内存信息\r\n"));
+		KdPrint(("[info]: Main_DispatchCallEntry -- 查询内存功能\r\n"));
 		PQueryMemInfo info = packet->Request;
 		if (info)
 		{
 			packet->ResponseCode = QueryMemory(info->Pid, info->BaseAddress, &info->MemBasicInfo);
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
+		break;
+	}
+	case CMD_ProtectHandle:
+	{
+		KdPrint(("[info]: Main_DispatchCallEntry -- 句柄保护功能\r\n"));
+		PProtectHandleInfo info = packet->Request;
+		if (info)
+		{
+			if (info->IsInstall == TRUE)
+			{
+				packet->ResponseCode = InstallProtect(info->Pid);
+			}
+			else
+			{
+				UninstallProtect();
+				packet->ResponseCode = STATUS_SUCCESS;
+			}
 		}
 		else
 		{
@@ -76,10 +100,19 @@ VOID DispatchCallEntry(PPACKET packet)
 	}
 }
 
+VOID CleanUpEnvironment()
+{
+	UninstallProtect();
+}
+
 VOID DriverUnload(PDRIVER_OBJECT pDrv)
 {
 	UNREFERENCED_PARAMETER(pDrv);
+	
 	CommUninitialize();
+
+	CleanUpEnvironment();
+
 	DbgPrint("unload ... \n\r");
 }
 
@@ -87,11 +120,13 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDrv, PUNICODE_STRING pReg)
 {
 	UNREFERENCED_PARAMETER(pReg);
 
+	RtlByPassCallBackVerify(pDrv->DriverSection);
+
 	NTSTATUS stat = STATUS_SUCCESS;
 
 	stat = CommInitialize(DispatchCallEntry);
 
 	pDrv->DriverUnload = DriverUnload;
-
+	
 	return stat;
 }

@@ -9,8 +9,7 @@ typedef enum _COMM_NUMBER
     CMD_DriverWrite,
     CMD_GetModuleR3,
     CMD_QueryMemory,
-    CMD_InstallProtect,
-    CMD_UninstallProtect,
+    CMD_ProtectHandle,
     CMD_RemoteCall
 }COMM_NUMBER;
 
@@ -54,6 +53,11 @@ typedef struct _QueryMemInfo
     _Out_ MYMEMORY_BASIC_INFORMATION MemBasicInfo;
 }QueryMemInfo, * PQueryMemInfo;
 
+typedef struct _ProtectHandleInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  BOOLEAN IsInstall;
+}ProtectHandleInfo, * PProtectHandleInfo;
 
 // Õ®–≈≈…«≤
 typedef VOID(*DispatchCallEntryPfn)(PPACKET packet);

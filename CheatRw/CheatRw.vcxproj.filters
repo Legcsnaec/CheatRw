@@ -32,6 +32,9 @@
     <ClCompile Include="ReadWrite.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="ProtectHandle.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GetModule.h">
@@ -50,6 +53,9 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="ReadWrite.h">
+      <Filter>head</Filter>
+    </ClInclude>
+    <ClInclude Include="ProtectHandle.h">
       <Filter>head</Filter>
     </ClInclude>
   </ItemGroup>
