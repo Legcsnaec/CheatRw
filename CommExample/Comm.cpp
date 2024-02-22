@@ -29,10 +29,13 @@ ULONG CommWin7(ULONG cmd, PVOID request,SIZE_T inSize)
 //Win10通信
 ULONG CommWin10(ULONG cmd, PVOID request, SIZE_T inSize)
 {
+	printf("cmd:%x   NtConvertBetween:%p\n", cmd, NtConvertBetween);
 	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtConvertBetween == NULL)
 	{
 		return RW_STATUS_INVALID_PARAMETER;
 	}
+
+	printf("cmd:%x   NtConvertBetween:%p\n", cmd, NtConvertBetween);
 
 	PACKET packet;
 	PPACKET pPack = &packet;
@@ -106,6 +109,7 @@ BOOL InitAppComm()
 // 发送通信包
 NTSTATUS SendCommPacket(ULONG cmd, PVOID inData, SIZE_T inSize)
 {
+	
 	NTSTATUS stat = RW_STATUS_SUCCESS;
 	USHORT buildNumber = GetOsBuildNumber();
 	if (InitAppComm())
@@ -117,6 +121,7 @@ NTSTATUS SendCommPacket(ULONG cmd, PVOID inData, SIZE_T inSize)
 		else
 		{
 			stat = CommWin10(cmd, inData, inSize);
+			printf("CommWin10 SendCommPacket\n");
 		}
 	}
 	else

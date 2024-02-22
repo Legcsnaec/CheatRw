@@ -3,4 +3,4 @@
 #include "Unrevealed.h"
 #include "Comm.h"
 
-NTSTATUS RemoteCall(HANDLE pid, PVOID shellCode, ULONG shellcodeSize);
+NTSTATUS RtlRemoteCall(HANDLE pid, PVOID shellCodePtr, ULONG64 shellCodeSize);

@@ -5,12 +5,12 @@
 typedef enum _COMM_NUMBER
 {
     IsR3ToR0 = 0x1000,
-    CMD_DriverRead,
-    CMD_DriverWrite,
-    CMD_GetModuleR3,
-    CMD_QueryMemory,
-    CMD_ProtectHandle,
-    CMD_RemoteCall
+    CMD_READ_MEMORY,
+    CMD_WRITE_MEMORY,
+    CMD_GET_MODULER3,
+    CMD_QUERY_MEMORY,
+    CMD_PROTECT_HANDLE,
+    CMD_REMOTE_CALL
 }COMM_NUMBER;
 
 typedef struct _PACKET
@@ -58,6 +58,13 @@ typedef struct _ProtectHandleInfo
     _In_  ULONG64 Pid;
     _In_  BOOLEAN IsInstall;
 }ProtectHandleInfo, * PProtectHandleInfo;
+
+typedef struct _RemoteCallInfo
+{
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 ShellCodePtr;
+    _In_  ULONG64 ShellCodeSize;
+}RemoteCallInfo, * PRemoteCallInfo;
 
 // Õ®–≈≈…«≤
 typedef VOID(*DispatchCallEntryPfn)(PPACKET packet);

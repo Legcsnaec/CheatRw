@@ -16,8 +16,8 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 		PIMAGE_OPTIONAL_HEADER64 pOphtHdr64 = NULL;
 		PIMAGE_OPTIONAL_HEADER32 pOphtHdr32 = NULL;
 
-		if (pFileHdr->Machine == IMAGE_FILE_MACHINE_I386) pOphtHdr32 = (PIMAGE_OPTIONAL_HEADER32)&pNtHdr->FileHeader;
-		else pOphtHdr64 = (PIMAGE_OPTIONAL_HEADER64)&pNtHdr->FileHeader;
+		if (pFileHdr->Machine == IMAGE_FILE_MACHINE_I386) pOphtHdr32 = (PIMAGE_OPTIONAL_HEADER32)&pNtHdr->OptionalHeader;
+		else pOphtHdr64 = (PIMAGE_OPTIONAL_HEADER64)&pNtHdr->OptionalHeader;
 
 		ULONG VirtualAddress = 0;
 		if (pOphtHdr64 != NULL) VirtualAddress = pOphtHdr64->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
@@ -45,8 +45,7 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 					{
 						if (funcName[strlen(searchFnName)] == 0)
 						{
-							funcOrdinal = pExportTable->Base + pAddrNameOrdinals[i] - 1;
-							funcAddr = modBase + pAddrFns[funcOrdinal];
+							funcAddr = modBase + pAddrFns[pAddrNameOrdinals[i]];
 							break;
 						}
 					}
@@ -73,49 +72,6 @@ PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName)
 	} while (0);
 
 	return (PVOID)funcAddr;
-}
-
-// 申请用户空间内存
-PVOID MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG allcType, ULONG protect)
-{
-	PVOID Result = NULL;
-	NTSTATUS(NTAPI * RtlAllocateVirtualMemory)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);
-	if (ExGetPreviousMode() == KernelMode)
-	{
-		// 不走SSDT表
-		(*(PVOID*)(&RtlAllocateVirtualMemory)) = ((PVOID)(NtAllocateVirtualMemory));
-	}
-	else
-	{
-		(*(PVOID*)(&RtlAllocateVirtualMemory)) = ((PVOID)(ZwAllocateVirtualMemory));
-	}
-	__try 
-	{
-		RtlAllocateVirtualMemory(processHandle, &Result, 0, &allocSize, allcType, protect);
-	}
-	__except (1) { Result = NULL; }
-	return Result;
-}
-
-// 释放用户空间内存
-NTSTATUS MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base)
-{
-	SIZE_T size = 0;
-	NTSTATUS(NTAPI* RtlFreeVirtualMemory)(HANDLE, PVOID*, PSIZE_T, ULONG);
-	if (ExGetPreviousMode() == KernelMode)
-	{
-		(*(PVOID*)(&RtlFreeVirtualMemory)) = ((PVOID)(NtFreeVirtualMemory));
-	}
-	else
-	{
-		(*(PVOID*)(&RtlFreeVirtualMemory)) = ((PVOID)(ZwFreeVirtualMemory));
-	}
-	__try
-	{
-		RtlFreeVirtualMemory(processHandle, &base, &size, MEM_RELEASE);
-	}
-	__except (1) { return STATUS_ACCESS_VIOLATION; }
-	return STATUS_SUCCESS;
 }
 
 // 内存是否是安全的,通过是否有物理内存判断
@@ -160,6 +116,24 @@ VOID RtlSplitString(IN PUNICODE_STRING fullPath, OUT PWCHAR filePath, OUT PWCHAR
 		j++;
 	}
 }
+
+// 字符出现最后下标
+int RtlStringLastIndexOf(PUNICODE_STRING fullPath, WCHAR ch)
+{
+	if (fullPath == NULL || fullPath->Buffer == NULL) return -1;
+
+	PWCHAR pathBuffer = fullPath->Buffer;
+	int len = wcslen(pathBuffer) - 1;
+	for (int j = len; j > 0; j--)
+	{
+		if (pathBuffer[j] == ch)
+		{
+			return j;
+		}
+	}
+	return -1;
+}
+
 
 // 从字符串中删除所有字符子串 双指针实现
 VOID RtlDelSubStr(PWCHAR str, const PWCHAR subStr)
@@ -264,6 +238,10 @@ OS_VERSION RtlGetOsVersion()
 // 还不还原都无所谓
 ULONG RtlByPassCallBackVerify(PVOID ldr)
 {
+	if (ldr == NULL || MmIsAddressValid(ldr))
+	{
+		return 0;
+	}
 	ULONG originFlags = ((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags;
 	((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags |= 0x20;
 	return originFlags;
@@ -272,6 +250,7 @@ ULONG RtlByPassCallBackVerify(PVOID ldr)
 // 恢复回调验证
 VOID RtlResetCallBackVerify(PVOID ldr, ULONG oldFlags)
 {
+	if (ldr == NULL || MmIsAddressValid(ldr)) return;
 	((PKLDR_DATA_TABLE_ENTRY64)ldr)->Flags = oldFlags;
 }
 
@@ -308,13 +287,6 @@ NTSTATUS RtlFindImageSection(IN PVOID imageBase, IN CHAR* sectionName, OUT PVOID
 	return STATUS_INVALID_IMAGE_FORMAT;
 }
 
-// 特征码搜索
-PVOID RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode)
-{
-
-	return NULL;
-}
-
 // 线程延迟几秒  Sleep
 NTSTATUS KeSleep(ULONG64 TimeOut)
 {
@@ -336,7 +308,7 @@ BOOLEAN PsIsWow64Process(HANDLE processId)
 		{
 			return FALSE;
 		}
-		ObReferenceObject(eProcess);
+		ObDereferenceObject(eProcess);
 	}
 	return TRUE;
 }
@@ -425,9 +397,9 @@ NTSTATUS GetDriverObjectByName(IN PWCH driverName, OUT PDRIVER_OBJECT* driver)
 }
 
 // 得到进程的主线程
-NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* pEthread)
+NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* ethread)
 {
-	if (eprocess == NULL || pEthread == NULL)
+	if (eprocess == NULL || ethread == NULL)
 	{
 		return STATUS_UNSUCCESSFUL;
 	}
@@ -435,19 +407,19 @@ NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* pEthread)
 	NTSTATUS stat = STATUS_UNSUCCESSFUL;
 	KAPC_STATE apcStat = { 0 };
 	HANDLE thread = NULL;
-	PETHREAD ethread = NULL;
+	PETHREAD tmpEthread = NULL;
 
 	KeStackAttachProcess(eprocess, &apcStat);
 	stat = CT_ZwGetNextThread(NtCurrentProcess(), NULL, THREAD_ALL_ACCESS, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, 0, &thread);
 	if (NT_SUCCESS(stat))
 	{
 		// 获取线程对象
-		stat = ObReferenceObjectByHandle(thread, THREAD_ALL_ACCESS, *PsThreadType, KernelMode, &ethread, NULL);
+		stat = ObReferenceObjectByHandle(thread, THREAD_ALL_ACCESS, *PsThreadType, KernelMode, &tmpEthread, NULL);
 		NtClose(thread);
 	}
 	KeUnstackDetachProcess(&apcStat);
 
-	*pEthread = ethread;
+	*ethread = tmpEthread;
 	return stat;
 }
 
@@ -710,4 +682,50 @@ NTSTATUS CT_PsResumeThread(IN PETHREAD Thread, OUT PULONG PreviousSuspendCount O
 		return PsResumeThreadFunc(Thread, PreviousSuspendCount);
 	}
 	return STATUS_NOT_IMPLEMENTED;
+}
+
+// 申请用户空间内存
+NTSTATUS CT_ZwAllocateVirtualMemory(HANDLE ProcessHandle, PVOID* BaseAddress, PSIZE_T AllocSize, ULONG AllcType, ULONG Protect)
+{
+	NTSTATUS Result = STATUS_SUCCESS;
+	NTSTATUS(NTAPI * RtlAllocateVirtualMemory)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);
+	if (ExGetPreviousMode() == KernelMode)
+	{
+		// 不走SSDT表
+		(*(PVOID*)(&RtlAllocateVirtualMemory)) = ((PVOID)(NtAllocateVirtualMemory));
+	}
+	else
+	{
+		(*(PVOID*)(&RtlAllocateVirtualMemory)) = ((PVOID)(ZwAllocateVirtualMemory));
+	}
+	__try
+	{
+		Result = RtlAllocateVirtualMemory(ProcessHandle, BaseAddress, 0, AllocSize, AllcType, Protect);
+	}
+	__except (1)
+	{
+		Result = STATUS_UNSUCCESSFUL;
+	}
+	return Result;
+}
+
+// 释放用户空间内存
+NTSTATUS CT_ZwFreeVirtualMemory(HANDLE ProcessHandle, PVOID* BaseAddress)
+{
+	SIZE_T size = 0;
+	NTSTATUS(NTAPI * RtlFreeVirtualMemory)(HANDLE, PVOID*, PSIZE_T, ULONG);
+	if (ExGetPreviousMode() == KernelMode)
+	{
+		(*(PVOID*)(&RtlFreeVirtualMemory)) = ((PVOID)(NtFreeVirtualMemory));
+	}
+	else
+	{
+		(*(PVOID*)(&RtlFreeVirtualMemory)) = ((PVOID)(ZwFreeVirtualMemory));
+	}
+	__try
+	{
+		RtlFreeVirtualMemory(ProcessHandle, BaseAddress, &size, MEM_RELEASE);
+	}
+	__except (1) { return STATUS_ACCESS_VIOLATION; }
+	return STATUS_SUCCESS;
 }

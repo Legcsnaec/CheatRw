@@ -972,6 +972,17 @@ EXTERN_C_START
 		_In_ ULONG Length,
 		_Out_ PULONG ReturnLength
 	);
+	NTSTATUS
+		PsReferenceProcessFilePointer(
+			IN PEPROCESS Process,
+			OUT PVOID* pFilePointer
+		);
+	NTSTATUS
+		IoQueryFileDosDeviceName(
+			IN PFILE_OBJECT FileObject,
+			OUT POBJECT_NAME_INFORMATION* ObjectNameInformation
+		);
+	void* NTAPI PsGetThreadTeb(PETHREAD Thread);
 
 EXTERN_C_END
 

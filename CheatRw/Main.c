@@ -12,7 +12,7 @@ VOID DispatchCallEntry(PPACKET packet)
 	KdPrint(("Current Thread PreviousMode is:%d\r\n", ExGetPreviousMode()));
 	switch (packet->CommFnID)
 	{
-	case CMD_DriverRead:
+	case CMD_READ_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 读功能\r\n"));
 		PReadMemInfo info = packet->Request;
@@ -26,7 +26,7 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
-	case CMD_DriverWrite:
+	case CMD_WRITE_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 写功能\r\n"));
 		PWriteMemInfo info = packet->Request;
@@ -40,7 +40,7 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
-	case CMD_GetModuleR3:
+	case CMD_GET_MODULER3:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 得到R3模块基址和大小\r\n"));
 		PR3ModuleInfo info = packet->Request;
@@ -57,7 +57,7 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
-	case CMD_QueryMemory:
+	case CMD_QUERY_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 查询内存功能\r\n"));
 		PQueryMemInfo info = packet->Request;
@@ -71,7 +71,7 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
-	case CMD_ProtectHandle:
+	case CMD_PROTECT_HANDLE:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 句柄保护功能\r\n"));
 		PProtectHandleInfo info = packet->Request;
@@ -94,6 +94,20 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
+	case CMD_REMOTE_CALL:
+	{
+		KdPrint(("[info]: Main_DispatchCallEntry -- 远程call功能\r\n"));
+		PRemoteCallInfo info = packet->Request;
+		if (info)
+		{
+			packet->ResponseCode = RtlRemoteCall(info->Pid, info->ShellCodePtr, info->ShellCodeSize);
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
+		break;
+	}
 	default:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 无效的通信ID\r\n"));
@@ -105,7 +119,7 @@ VOID DispatchCallEntry(PPACKET packet)
 VOID DriverUnload(PDRIVER_OBJECT pDrv)
 {
 	UNREFERENCED_PARAMETER(pDrv);
-	
+
 	CommUninitialize();
 
 	DestoryCallback();

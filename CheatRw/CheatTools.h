@@ -44,20 +44,14 @@ typedef enum _OS_VERSION
 // 64\32位版本,根据基址和名称得到函数地址,导出表解析
 PVOID MmGetSystemRoutineAddressEx(ULONG64 modBase, CHAR* searchFnName);
 
-// 申请用户空间内存
-PVOID MmAllocateUserVirtualMemory(HANDLE processHandle, SIZE_T allocSize, ULONG allocationType, ULONG protect);
-
-// 释放用户空间内存
-NTSTATUS MmFreeUserVirtualMemory(HANDLE processHandle, PVOID base);
-
 // 内存是否是安全的,通过是否有物理内存判断(未完成)
 BOOLEAN MmIsAddressSafe(PVOID startAddress);
 
-// 特征码搜索(未完成)
-PVOID RtlScanFeatureCode(PVOID begin, PVOID end, CHAR* featureCode);
-
 // 得到内核PE节的开始位置和结束位置
 NTSTATUS RtlFindImageSection(IN PVOID imageBase, IN CHAR* sectionName, OUT PVOID* sectionStart, OUT PVOID* sectionEnd);
+
+// 字符出现最后下标
+int RtlStringLastIndexOf(PUNICODE_STRING fullPath, WCHAR ch);
 
 // 删除字符串
 VOID RtlDelSubStr(PWCHAR str, PWCHAR subStr);
@@ -95,7 +89,7 @@ VOID MdlUnMapMemory(IN PMDL mdl, IN PVOID mapBase);
 NTSTATUS GetDriverObjectByName(IN PWCH driverName, OUT PDRIVER_OBJECT* driver);
 
 // 得到进程的主线程
-NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* pEthread);
+NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* ethread);
 
 // -------  接口设计  -------
 // 
@@ -116,4 +110,10 @@ NTSTATUS NTAPI CT_PsSuspendThread(IN PETHREAD Thread, OUT PULONG PreviousSuspend
 
 // PsResumeThread接口封装一层,线程恢复
 NTSTATUS NTAPI CT_PsResumeThread(IN PETHREAD Thread, OUT PULONG PreviousSuspendCount OPTIONAL);
+
+// 申请用户空间内存
+NTSTATUS NTAPI CT_ZwAllocateVirtualMemory(HANDLE ProcessHandle, PVOID* BaseAddress, PSIZE_T AllocSize, ULONG AllcType, ULONG Protect);
+
+// 释放用户空间内存
+NTSTATUS NTAPI CT_ZwFreeVirtualMemory(HANDLE ProcessHandle, PVOID* BaseAddress);
 
