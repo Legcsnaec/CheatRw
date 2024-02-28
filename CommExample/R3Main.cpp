@@ -66,12 +66,18 @@ int main()
 	std::cout << "please input pid:" << endl;
 	std::cin >> p;
 
-	RemoteCallInfo data5 = { 0 };
+	ProtectHandleInfo data4 = { 0 };
+	data4.Pid = p;
+	data4.IsInstall = TRUE;
+	stat = SendCommPacket(CMD_PROTECT_HANDLE, &data4, sizeof(ProtectHandleInfo));
+	printf("stat:%x\n", stat);
+
+	/*RemoteCallInfo data5 = { 0 };
 	data5.Pid = p;
 	data5.ShellCodePtr = (ULONG64)shellcodex86;
 	data5.ShellCodeSize = sizeof(shellcodex86);
 	stat = SendCommPacket(CMD_REMOTE_CALL, &data5, sizeof(RemoteCallInfo));
-	printf("stat:%x\n", stat);
+	printf("stat:%x\n", stat);*/
 
 	system("pause");
 	return 0;

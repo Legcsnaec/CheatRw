@@ -129,8 +129,9 @@ VOID DriverUnload(PDRIVER_OBJECT pDrv)
 
 NTSTATUS DriverEntry(PDRIVER_OBJECT pDrv, PUNICODE_STRING pReg)
 {
-	UNREFERENCED_PARAMETER(pReg);
 	NTSTATUS stat = STATUS_SUCCESS;
+
+	DbgPrint(" ------------- CheatRw DriverEntry ------------ \r\n");
 
 	stat = CommInitialize(DispatchCallEntry);
 	if (!NT_SUCCESS(stat))
@@ -138,7 +139,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDrv, PUNICODE_STRING pReg)
 		goto end;
 	}
 
-	RtlByPassCallBackVerify(pDrv->DriverSection);
+	// 作为被隐藏的驱动,无驱动对象
+	// RtlByPassCallBackVerify(pDrv->DriverSection);
+	
 	stat = RegisterCallback();
 	if (!NT_SUCCESS(stat))
 	{
@@ -146,6 +149,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDrv, PUNICODE_STRING pReg)
 	}
 
 end:
-	pDrv->DriverUnload = DriverUnload;
+	if (pDrv)
+	{
+		pDrv->DriverUnload = DriverUnload;
+	}
 	return stat;
 }
