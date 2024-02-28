@@ -20,6 +20,7 @@
 typedef enum _COMM_NUMBER
 {
     IsR3ToR0 = 0x1000,
+    CMD_TEST_CONNECT,      // 用于测试驱动连通,三环在加载驱动前测试一下是否连通,防止重复加载
     CMD_READ_MEMORY,
     CMD_WRITE_MEMORY,
     CMD_GET_MODULER3,

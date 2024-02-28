@@ -12,6 +12,13 @@ VOID DispatchCallEntry(PPACKET packet)
 	KdPrint(("Current Thread PreviousMode is:%d\r\n", ExGetPreviousMode()));
 	switch (packet->CommFnID)
 	{
+	case CMD_TEST_CONNECT:
+	{
+		// 用于测试驱动连通性 ,三环在要加载驱动前测试一下是否连通,防止重复加载驱动
+		KdPrint(("[info]: Main_DispatchCallEntry -- 已连通\r\n"));
+		packet->ResponseCode = STATUS_SUCCESS;
+		break;
+	}
 	case CMD_READ_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 读功能\r\n"));

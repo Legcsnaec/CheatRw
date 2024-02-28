@@ -1,0 +1,12 @@
+ LIBRARY 
+    EXPORTS
+    	CtDriverLoad
+		CtDriverUnLoad
+		CtGetModuleR3
+		CtReadMemory
+		CtWriteMemory
+		CtQueryMemory
+		CtProtectHandle
+		CtRemoteCall
+
+		CT_RemoteCall=CtRemoteCall

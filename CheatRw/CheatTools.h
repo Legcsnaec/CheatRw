@@ -91,6 +91,15 @@ NTSTATUS GetDriverObjectByName(IN PWCH driverName, OUT PDRIVER_OBJECT* driver);
 // 得到进程的主线程
 NTSTATUS GetMainThreadByEprocess(IN PEPROCESS eprocess, OUT PETHREAD* ethread);
 
+// 删除驱动加载的注册表配置,根据注册表路径
+NTSTATUS RtlDeleteDrvRegPath(PUNICODE_STRING regPath);
+
+// 根据文件路径强制删除文件
+NTSTATUS RtlForceDeleteFile(PWCH filePath);
+
+// 得到R0模块 基址&大小
+ULONG_PTR GetModuleR0(PUCHAR moduleName, ULONG_PTR* moduleSize);
+
 // -------  接口设计  -------
 // 
 // MmCopyVirtualMemory接口封装一层,动态获取函数地址(过iat hook,"瓦洛兰特内存读写")

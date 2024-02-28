@@ -5,6 +5,7 @@
 typedef enum _COMM_NUMBER
 {
     IsR3ToR0 = 0x1000,
+    CMD_TEST_CONNECT,
     CMD_READ_MEMORY,
     CMD_WRITE_MEMORY,
     CMD_GET_MODULER3,
