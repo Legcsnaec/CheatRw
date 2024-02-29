@@ -2,6 +2,7 @@
 #include "Unrevealed.h"
 
 //================ 通信约定 ====================
+// 32、64位环境结构大小一直,好满足x86进程与驱动通信
 typedef enum _COMM_NUMBER
 {
     IsR3ToR0 = 0x1000,
@@ -11,32 +12,33 @@ typedef enum _COMM_NUMBER
     CMD_GET_MODULER3,
     CMD_QUERY_MEMORY,
     CMD_PROTECT_HANDLE,
-    CMD_REMOTE_CALL
+    CMD_REMOTE_CALL,
+    COMM_NUMBER_SIZE
 }COMM_NUMBER;
 
 typedef struct _PACKET
 {
     COMM_NUMBER CommFlag;   // 通信标志
     COMM_NUMBER CommFnID;   // 功能ID
-    PVOID Request;          // 请求数据包(响应也在)
     ULONG Length;           // 长度
     ULONG ResponseCode;     // 结果 0正常 其他看异常
+    ULONG64 Request;        // 请求数据包(响应也在)
 }PACKET, * PPACKET;
 
 typedef struct _R3ModuleInfo
 {
-    _In_  HANDLE Pid;
-    _In_  char* ModuleName;
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 ModuleName;
     _Out_ ULONG64 ModuleSize;
     _Out_ ULONG64 ModuleBase;
 }R3ModuleInfo, * PR3ModuleInfo;
 
 typedef struct _ReadMemInfo
 {
-    _In_  HANDLE Pid;
-    _In_  PVOID TagAddress;
-    _Out_ PVOID ReadBuffer;
-    _In_  SIZE_T ReadSize;
+    _In_  ULONG64 Pid;
+    _In_  ULONG64 TagAddress;
+    _Out_ ULONG64 ReadBuffer;
+    _In_  ULONG64 ReadSize;
 }ReadMemInfo, * PReadMemInfo;
 
 typedef struct _WriteMemInfo

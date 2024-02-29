@@ -35,13 +35,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{1BF4C452-2E94-4821-8441-28919BE6AE8F}</ProjectGuid>
+    <ProjectGuid>{A3BC035F-F1E1-4D92-AC33-0A62DB74440E}</ProjectGuid>
     <TemplateGuid>{dd38f7fc-d7bd-488b-9242-7d8754cde80d}</TemplateGuid>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration>Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">Win32</Platform>
-    <RootNamespace>CheatRw</RootNamespace>
+    <RootNamespace>DrvLoader</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -122,6 +122,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -147,52 +148,48 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DriverSign>
-      <FileDigestAlgorithm>
-      </FileDigestAlgorithm>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-    </ClCompile>
     <ClCompile>
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
-    <Link>
-      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
-    </Link>
+    <PreBuildEvent>
+      <Command>build_encode_debug.bat</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>driver_sign_debug.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
-    <Link>
-      <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
-    </Link>
     <ClCompile>
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
+    <PreBuildEvent>
+      <Command>build_encode_release.bat</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>driver_sign_release.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <Inf Include="DrvLoader.inf" />
+  </ItemGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CheatTools.c" />
-    <ClCompile Include="Comm.c" />
-    <ClCompile Include="Main.c" />
-    <ClCompile Include="GetModule.c" />
-    <ClCompile Include="ProtectHandle.c" />
-    <ClCompile Include="ReadWrite.c" />
-    <ClCompile Include="RemoteCall.c" />
-    <ClCompile Include="SearchCode.c" />
+    <ClInclude Include="dll.h" />
+    <ClInclude Include="DrvLoader.h" />
+    <ClInclude Include="Unrevealed.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CheatTools.h" />
-    <ClInclude Include="Comm.h" />
-    <ClInclude Include="GetModule.h" />
-    <ClInclude Include="ProtectHandle.h" />
-    <ClInclude Include="ReadWrite.h" />
-    <ClInclude Include="RemoteCall.h" />
-    <ClInclude Include="SearchCode.h" />
-    <ClInclude Include="Unrevealed.h" />
+    <ClCompile Include="DrvLoader.c" />
+    <ClCompile Include="DrvMain.c" />
+    <ClCompile Include="utils.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

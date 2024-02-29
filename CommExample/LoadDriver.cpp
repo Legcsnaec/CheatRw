@@ -1,9 +1,7 @@
 #include <windows.h>
 #include <Winsvc.h>
 #include "LoadDriver.h"
-//#include "dll.h"
-
-int* sysData = nullptr;
+#include "dll.h"
 
 LoadDriver::LoadDriver()
 {
@@ -29,7 +27,7 @@ bool LoadDriver::load(std::string path, std::string serviceName)
 	SC_HANDLE hService = NULL;
 	hService = CreateServiceA(
 		hSc, serviceName.c_str(), serviceName.c_str(),
-		SC_MANAGER_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START,
+		SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START,
 		SERVICE_ERROR_IGNORE, path.c_str(), NULL, NULL, NULL, NULL, NULL);
 	if (hService == NULL)
 	{
@@ -86,12 +84,11 @@ HMODULE LoadDriver::getDllBase()
 
 bool LoadDriver::installDriver(std::string path, std::string serviceName)
 {
-	HRSRC hResc;
-	DWORD dwImageSize;
 	HANDLE hFile;
 	DWORD dwByteWrite;
-	HGLOBAL	hResourecImage;
+	DWORD dwImageSize;
 	CHAR str[512] = { 0 };
+	bool isSuccess = true;
 
 	// 或许是上次由于未知错误, 导致驱动卸载不干净, 这里卸载一次
 	this->unload(serviceName.c_str());
@@ -99,39 +96,29 @@ bool LoadDriver::installDriver(std::string path, std::string serviceName)
 	// 在自定义资源中释放出sys
 	dwImageSize = sizeof(sysData);
 	unsigned char* pMemory = (unsigned char*)malloc(dwImageSize);
-	memcpy(pMemory, sysData, dwImageSize);
-	for (ULONG i = 0; i < dwImageSize; i++)
+	if (pMemory)
 	{
-		pMemory[i] ^= 0xd8;
-		pMemory[i] ^= 0xcd;
-	}
+		memcpy(pMemory, sysData, dwImageSize);
+		for (ULONG i = 0; i < dwImageSize; i++)
+		{
+			pMemory[i] ^= XOR_ENCODE_KEY;
+		}
 
-	hFile = CreateFileA(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
-	{
-		OutputDebugStringA(path.c_str());
-		return false;
+		hFile = CreateFileA(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile != INVALID_HANDLE_VALUE)
+		{
+			if (WriteFile(hFile, pMemory, dwImageSize, &dwByteWrite, NULL))
+			{
+				CloseHandle(hFile);
+				if (!this->load(path, serviceName))
+				{
+					isSuccess = false;
+				}
+				// 安装驱动后在win10可能删不掉,但驱动中写了强制自删除
+				DeleteFileA(path.c_str());
+			}
+		}
+		free(pMemory);
 	}
-	if (!WriteFile(hFile, pMemory, dwImageSize, &dwByteWrite, NULL))
-	{
-		OutputDebugStringA(path.c_str());
-		CloseHandle(hFile);
-		return false;
-	}
-	if (dwByteWrite != dwImageSize)
-	{
-		OutputDebugStringA(path.c_str());
-		CloseHandle(hFile);
-		return false;
-	}
-	CloseHandle(hFile);
-
-	// 安装驱动
-	if (!this->load(path, serviceName))
-	{
-		DeleteFileA(path.c_str());
-		return false;
-	}
-	DeleteFileA(path.c_str());
-	return true;
+	return isSuccess;
 }

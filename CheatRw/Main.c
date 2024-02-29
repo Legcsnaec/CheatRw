@@ -22,10 +22,10 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_READ_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 读功能\r\n"));
-		PReadMemInfo info = packet->Request;
+		PReadMemInfo info = (PReadMemInfo)packet->Request;
 		if (info)
 		{
-			packet->ResponseCode = ReadMemory(info->Pid, info->TagAddress, info->ReadBuffer, info->ReadSize);
+			packet->ResponseCode = ReadMemory((HANDLE)info->Pid, (PVOID)info->TagAddress, (PVOID)info->ReadBuffer, info->ReadSize);
 		}
 		else
 		{
@@ -36,10 +36,10 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_WRITE_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 写功能\r\n"));
-		PWriteMemInfo info = packet->Request;
+		PWriteMemInfo info = (PWriteMemInfo)packet->Request;
 		if (info)
 		{
-			packet->ResponseCode = WriteMemory(info->Pid, info->TagAddress, info->WriteBuffer, info->WriteSize);
+			packet->ResponseCode = WriteMemory((HANDLE)info->Pid, (PVOID)info->TagAddress, (PVOID)info->WriteBuffer, info->WriteSize);
 		}
 		else
 		{
@@ -50,11 +50,11 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_GET_MODULER3:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 得到R3模块基址和大小\r\n"));
-		PR3ModuleInfo info = packet->Request;
+		PR3ModuleInfo info = (PR3ModuleInfo)packet->Request;
 		if (info)
 		{
 			ULONG64 moduleSize = 0;
-			info->ModuleBase = GetModuleR3(info->Pid, info->ModuleName, &moduleSize);
+			info->ModuleBase = GetModuleR3((HANDLE)info->Pid, (char*)info->ModuleName, &moduleSize);
 			info->ModuleSize = moduleSize;
 			packet->ResponseCode = 0;
 		}
@@ -67,10 +67,10 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_QUERY_MEMORY:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 查询内存功能\r\n"));
-		PQueryMemInfo info = packet->Request;
+		PQueryMemInfo info = (PQueryMemInfo)packet->Request;
 		if (info)
 		{
-			packet->ResponseCode = QueryMemory(info->Pid, info->BaseAddress, &info->MemBasicInfo);
+			packet->ResponseCode = QueryMemory((HANDLE)info->Pid, info->BaseAddress, &info->MemBasicInfo);
 		}
 		else
 		{
@@ -81,12 +81,12 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_PROTECT_HANDLE:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 句柄保护功能\r\n"));
-		PProtectHandleInfo info = packet->Request;
+		PProtectHandleInfo info = (PProtectHandleInfo)packet->Request;
 		if (info)
 		{
 			if (info->IsInstall == TRUE)
 			{
-				SetProtectPid(info->Pid);
+				SetProtectPid((HANDLE)info->Pid);
 				packet->ResponseCode = STATUS_SUCCESS;
 			}
 			else
@@ -104,10 +104,10 @@ VOID DispatchCallEntry(PPACKET packet)
 	case CMD_REMOTE_CALL:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 远程call功能\r\n"));
-		PRemoteCallInfo info = packet->Request;
+		PRemoteCallInfo info = (PRemoteCallInfo)packet->Request;
 		if (info)
 		{
-			packet->ResponseCode = RtlRemoteCall(info->Pid, info->ShellCodePtr, info->ShellCodeSize);
+			packet->ResponseCode = RtlRemoteCall((HANDLE)info->Pid, (PVOID)info->ShellCodePtr, info->ShellCodeSize);
 		}
 		else
 		{

@@ -1,54 +1,25 @@
 #include "Comm.h"
 
+// -- 自定义结构 --
+// Win7 驱动通信
+typedef struct _IO_STATUS_BLOCK
+{
+	union
+	{
+		PVOID Status;
+		PVOID Pointer;
+	};
+	ULONG_PTR Information;
+} IO_STATUS_BLOCK, * PIO_STATUS_BLOCK;
+typedef ULONG(*NtQueryInformationFilePfn)(HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID  FileInformation, ULONG Length, ULONG FileInformationClass);
+
+// Win10驱动通信
+typedef ULONG64(_fastcall* NtConvertBetweenPfn)(char, PVOID, PVOID, PVOID);
+
+// 全局保存
 HANDLE CommFile = NULL;
 NtConvertBetweenPfn NtConvertBetween = NULL;				// WIN 10
 NtQueryInformationFilePfn NtQueryInformationFile = NULL;	// WIN 7
-
-// Win7通信函数
-ULONG CommWin7(ULONG cmd, PVOID request,SIZE_T inSize)
-{
-	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtQueryInformationFile == NULL)
-	{
-		return RW_STATUS_INVALID_PARAMETER;
-	}
-	PACKET packet;
-	packet.CommFlag = IsR3ToR0;
-	packet.CommFnID = (COMM_NUMBER)cmd;
-	packet.Request = request;
-	packet.Length = inSize;
-	packet.ResponseCode = 0;
-
-	IO_STATUS_BLOCK ioStatus = { 0 };
-	char buffer[0xE0] = { 0 };
-	memcpy(buffer, &packet, sizeof(PACKET));
-	NtQueryInformationFile(CommFile, &ioStatus, buffer, 0x100, 0x34);
-	memcpy(&packet, buffer, sizeof(PACKET));
-	return packet.ResponseCode;
-}
-
-//Win10通信
-ULONG CommWin10(ULONG cmd, PVOID request, SIZE_T inSize)
-{
-	printf("cmd:%x   NtConvertBetween:%p\n", cmd, NtConvertBetween);
-	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtConvertBetween == NULL)
-	{
-		return RW_STATUS_INVALID_PARAMETER;
-	}
-
-	printf("cmd:%x   NtConvertBetween:%p\n", cmd, NtConvertBetween);
-
-	PACKET packet;
-	PPACKET pPack = &packet;
-	packet.CommFlag = IsR3ToR0;
-	packet.CommFnID = (COMM_NUMBER)cmd;
-	packet.Request = request;
-	packet.Length = inSize;
-	packet.ResponseCode = 0;
-
-	ULONG64 arg = 0;
-	NtConvertBetween(1, &pPack, &arg, &arg);
-	return packet.ResponseCode;
-}
 
 // 获取内部版本号
 USHORT GetOsBuildNumber()
@@ -63,6 +34,49 @@ USHORT GetOsBuildNumber()
 	osNumber = *(PUSHORT)(peb + 0xac);
 #endif
 	return osNumber;
+}
+
+// Win7通信函数
+ULONG CommWin7(ULONG cmd, PVOID request,SIZE_T inSize)
+{
+	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtQueryInformationFile == NULL)
+	{
+		return RW_STATUS_INVALID_PARAMETER;
+	}
+	PACKET packet;
+	packet.CommFlag = IsR3ToR0;
+	packet.CommFnID = (COMM_NUMBER)cmd;
+	packet.Request = (ULONG64)request;
+	packet.Length = inSize;
+	packet.ResponseCode = RW_STATUS_UNSUCCESSFUL;
+
+	IO_STATUS_BLOCK ioStatus = { 0 };
+	char buffer[0xE0] = { 0 };
+	memcpy(buffer, &packet, sizeof(PACKET));
+	NtQueryInformationFile(CommFile, &ioStatus, buffer, 0x100, 0x34);
+	memcpy(&packet, buffer, sizeof(PACKET));
+	return packet.ResponseCode;
+}
+
+//Win10通信
+ULONG CommWin10(ULONG cmd, PVOID request, SIZE_T inSize)
+{
+	if (cmd >= COMM_NUMBER_SIZE || cmd == IsR3ToR0 || NtConvertBetween == NULL)
+	{
+		return RW_STATUS_INVALID_PARAMETER;
+	}
+
+	PACKET packet;
+	PPACKET pPack = &packet;
+	packet.CommFlag = IsR3ToR0;
+	packet.CommFnID = (COMM_NUMBER)cmd;
+	packet.Request = (ULONG64)request;
+	packet.Length = inSize;
+	packet.ResponseCode = RW_STATUS_UNSUCCESSFUL;
+
+	ULONG64 arg = 0;
+	NtConvertBetween(1, &pPack, &arg, &arg);
+	return packet.ResponseCode;
 }
 
 // 通信初始化,会占一个文件句柄程序结束后释放
@@ -110,7 +124,7 @@ BOOL InitAppComm()
 NTSTATUS SendCommPacket(ULONG cmd, PVOID inData, SIZE_T inSize)
 {
 	
-	NTSTATUS stat = RW_STATUS_SUCCESS;
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
 	USHORT buildNumber = GetOsBuildNumber();
 	if (InitAppComm())
 	{
@@ -121,7 +135,6 @@ NTSTATUS SendCommPacket(ULONG cmd, PVOID inData, SIZE_T inSize)
 		else
 		{
 			stat = CommWin10(cmd, inData, inSize);
-			printf("CommWin10 SendCommPacket\n");
 		}
 	}
 	else

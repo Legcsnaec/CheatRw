@@ -7,38 +7,40 @@
     <Filter Include="export">
       <UniqueIdentifier>{b090dac0-f65a-4eca-8c29-c08235b1098e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="head">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="src">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="dll">
+      <UniqueIdentifier>{41b705f5-e841-4562-a795-d9adb0b0c9f4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="R3Main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="Comm.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="LoadDriver.cpp">
       <Filter>LoadDrv</Filter>
     </ClCompile>
+    <ClCompile Include="Comm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="ExportApi.cpp">
-      <Filter>export</Filter>
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Comm.h">
-      <Filter>head</Filter>
-    </ClInclude>
     <ClInclude Include="LoadDriver.h">
       <Filter>LoadDrv</Filter>
     </ClInclude>
+    <ClInclude Include="Comm.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="ExportApi.h">
-      <Filter>export</Filter>
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="dll.h">
+      <Filter>dll</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

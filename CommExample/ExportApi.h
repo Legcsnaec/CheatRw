@@ -16,14 +16,14 @@ EXTERN_C BOOLEAN WINAPI CtDriverLoad();
 
 EXTERN_C VOID WINAPI CtDriverUnLoad();
 
-EXTERN_C ULONG64 WINAPI CtGetModuleR3(DWORD pid, char* moduleName);
+EXTERN_C ULONG64 WINAPI CtGetModuleR3(IN DWORD_PTR pid, IN char* moduleName, OUT PULONG64 moduleSizeAddr);
 
-EXTERN_C BOOLEAN WINAPI CtReadMemory(DWORD pid, ULONG64 BaseAddress, PVOID Buffer, ULONG size);
+EXTERN_C BOOLEAN WINAPI CtReadMemory(IN DWORD_PTR pid, IN ULONG64 baseAddress,OUT PVOID readBuffer,IN ULONG readSize);
 
-EXTERN_C BOOLEAN WINAPI CtWriteMemory(DWORD pid, ULONG64 BaseAddress, PVOID Buffer, ULONG size);
+EXTERN_C BOOLEAN WINAPI CtWriteMemory(IN DWORD_PTR pid, IN ULONG64 baseAddress, IN PVOID writeBuffer, IN ULONG writeSize);
 
-EXTERN_C BOOLEAN WINAPI CtQueryMemory(DWORD pid, ULONG64 BaseAddress, PMMEMORY_BASIC_INFORMATION pinfo);
+EXTERN_C BOOLEAN WINAPI CtQueryMemory(IN DWORD_PTR pid, IN ULONG64 baseAddress, OUT PMMEMORY_BASIC_INFORMATION basicInfoAddr);
 
-EXTERN_C BOOLEAN WINAPI CtProtectHandle(DWORD pid);
+EXTERN_C BOOLEAN WINAPI CtProtectHandle(IN DWORD_PTR pid);
 
-EXTERN_C BOOLEAN WINAPI CtRemoteCall(DWORD pid, PVOID shellcode, DWORD shellcodeSize);
+EXTERN_C BOOLEAN WINAPI CtRemoteCall(DWORD_PTR pid, PVOID shellcode, DWORD shellcodeSize);
