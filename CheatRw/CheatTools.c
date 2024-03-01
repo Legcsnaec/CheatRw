@@ -575,6 +575,39 @@ end:
 	return moudleBase;
 }
 
+// 得到PspNotifyEnableMask地址
+ULONG64 RtlGetPspNotifyEnableMaskAddress()
+{
+	// 找 PsSetLoadImageNotifyRoutineEx(不带Ex是Win7) 获得标志偏移
+	// +40是win10头部有个mov rax,__security_cookie需要越过
+	ULONG64 retAddress = 0;	
+	ULONG headCodeSize = 40;
+
+	WCHAR funcNameStr[] = { 'P','s','S','e','t','L','o','a','d','I','m','a','g','e', 'N','o','t','i','f', 'y', 'R','o','u','t','i','n','e','E','x',0,0 };
+	UNICODE_STRING uniFuncNameStr = { 0 };
+	RtlInitUnicodeString(&uniFuncNameStr, funcNameStr);
+	PVOID funcAddress = MmGetSystemRoutineAddress(&uniFuncNameStr);
+
+	PUCHAR funcRoutine = funcAddress != NULL ? (PUCHAR)funcAddress : (PUCHAR)PsSetLoadImageNotifyRoutine;
+	if (funcRoutine != NULL)
+	{
+		funcRoutine = funcRoutine + headCodeSize;
+		for (size_t i = 0; i < 0x100; i++)
+		{
+			if (funcRoutine[i] == 0x8B && funcRoutine[i + 1] == 0x05)
+			{
+				LARGE_INTEGER nextCodeAddress = { 0 };
+				ULONG offset = *(PULONG)((ULONG64)&funcRoutine[i] + 2);
+				nextCodeAddress.QuadPart = ((ULONG64)&funcRoutine[i] + 6);
+				nextCodeAddress.LowPart += offset;
+				retAddress = nextCodeAddress.QuadPart;
+				break;
+			}
+		}
+	}
+	return retAddress;
+}
+
 //  ---------------------  接口设计  --------------------- 
 // 
 // MmCopyVirtualMemory接口封装一层,动态获取地址(过iat hook该api)

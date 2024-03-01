@@ -100,6 +100,9 @@ NTSTATUS RtlForceDeleteFile(PWCH filePath);
 // 得到R0模块 基址&大小
 ULONG_PTR GetModuleR0(PUCHAR moduleName, ULONG_PTR* moduleSize);
 
+// 得到PspNotifyEnableMask地址,得到了之后自己修改Mask防止调用回调
+ULONG64 RtlGetPspNotifyEnableMaskAddress();
+
 // -------  接口设计  -------
 // 
 // MmCopyVirtualMemory接口封装一层,动态获取函数地址(过iat hook,"瓦洛兰特内存读写")
