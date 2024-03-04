@@ -5,6 +5,7 @@
 #include "CheatTools.h"
 #include "ProtectHandle.h"
 #include "RemoteCall.h"
+#include "km/kmclass.h"
 
 // 功能调度函数
 VOID DispatchCallEntry(PPACKET packet)
@@ -115,6 +116,36 @@ VOID DispatchCallEntry(PPACKET packet)
 		}
 		break;
 	}
+	case CMD_KEYBOARD:
+	{
+		KdPrint(("[info]: Main_DispatchCallEntry -- 模拟键盘功能\r\n"));
+		PKEYBOARD_INPUT_DATA info = (PKEYBOARD_INPUT_DATA)packet->Request;
+		if (info)
+		{
+			ExecuteKeyboardCallback(info);
+			packet->ResponseCode = STATUS_SUCCESS;
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
+		break;
+	}
+	case CMD_MOUSE:
+	{
+		KdPrint(("[info]: Main_DispatchCallEntry -- 模拟鼠标功能\r\n"));
+		PMOUSE_INPUT_DATA info = (PMOUSE_INPUT_DATA)packet->Request;
+		if (info)
+		{
+			ExecuteMouseCallback(info);
+			packet->ResponseCode = STATUS_SUCCESS;
+		}
+		else
+		{
+			packet->ResponseCode = STATUS_UNSUCCESSFUL;
+		}
+		break;
+	}
 	default:
 	{
 		KdPrint(("[info]: Main_DispatchCallEntry -- 无效的通信ID\r\n"));
@@ -152,7 +183,15 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT pDrv, PUNICODE_STRING pReg)
 	stat = RegisterCallback();
 	if (!NT_SUCCESS(stat))
 	{
+		CommUninitialize();
 		goto end;
+	}
+
+	stat = InitKmClass();
+	if (!NT_SUCCESS(stat))
+	{
+		CommUninitialize();
+		DestoryCallback();
 	}
 
 end:

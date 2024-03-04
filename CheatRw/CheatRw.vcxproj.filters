@@ -12,6 +12,9 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="km">
+      <UniqueIdentifier>{ab386e30-9609-4f75-9679-0b90aee884ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GetModule.c">
@@ -38,6 +41,9 @@
     <ClCompile Include="RemoteCall.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="km\kmclass.c">
+      <Filter>km</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GetModule.h">
@@ -63,6 +69,9 @@
     </ClInclude>
     <ClInclude Include="RemoteCall.h">
       <Filter>head</Filter>
+    </ClInclude>
+    <ClInclude Include="km\kmclass.h">
+      <Filter>km</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

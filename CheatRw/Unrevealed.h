@@ -849,6 +849,20 @@ typedef enum _KAPC_ENVIRONMENT {
 	InsertApcEnvironment
 } KAPC_ENVIRONMENT;
 
+typedef struct _SYSTEM_SERVICE_TABLE {
+	PULONG ServiceTableBase;                //这个指向系统服务函数地址表
+	PULONG ServiceCounterTableBase;
+	ULONG NumberOfService;                  //服务函数的个数
+	ULONG ParamTableBase;
+}SYSTEM_SERVICE_TABLE, * PSYSTEM_SERVICE_TABLE;
+
+typedef struct _SERVICE_DESCRIPTOR_TABLE {
+	SYSTEM_SERVICE_TABLE ntoskrnel;         //ntoskrnl.exe的服务函数
+	SYSTEM_SERVICE_TABLE win32k;            //win32k.sys的服务函数,(gdi.dll/user.dll的内核支持)
+	SYSTEM_SERVICE_TABLE NotUsed1;
+	SYSTEM_SERVICE_TABLE NotUsed2;
+}SYSTEM_DESCRIPTOR_TABLE, * PSYSTEM_DESCRIPTOR_TABLE;
+
 // 导出函数但未文档化的
 EXTERN_C_START
 
@@ -856,6 +870,7 @@ EXTERN_C_START
 	extern POBJECT_TYPE* IoDriverObjectType;
 	extern POBJECT_TYPE* ExMutantObjectType;
 	extern POBJECT_TYPE* MmSectionObjectType;
+	extern PSYSTEM_DESCRIPTOR_TABLE KeServiceDescriptorTable;
 
 	NTKERNELAPI PIMAGE_NT_HEADERS NTAPI RtlImageNtHeader(PVOID);
 	NTKERNELAPI PVOID NTAPI PsGetProcessWow64Process(PEPROCESS);

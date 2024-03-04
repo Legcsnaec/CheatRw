@@ -27,3 +27,16 @@ EXTERN_C BOOLEAN WINAPI CtQueryMemory(IN DWORD_PTR pid, IN ULONG64 baseAddress, 
 EXTERN_C BOOLEAN WINAPI CtProtectHandle(IN DWORD_PTR pid);
 
 EXTERN_C BOOLEAN WINAPI CtRemoteCall(DWORD_PTR pid, PVOID shellcode, DWORD shellcodeSize);
+
+// ---------------------------------- 键鼠相关导出 ----------------------------------
+
+EXTERN_C BOOLEAN KeyDown(USHORT VirtualKey);
+EXTERN_C BOOLEAN KeyUp(USHORT VirtualKey);
+EXTERN_C BOOLEAN MouseLeftButtonDown();
+EXTERN_C BOOLEAN MouseLeftButtonUp();
+EXTERN_C BOOLEAN MouseRightButtonDown();
+EXTERN_C BOOLEAN MouseRightButtonUp();
+EXTERN_C BOOLEAN MouseMiddleButtonDown();
+EXTERN_C BOOLEAN MouseMiddleButtonUp();
+EXTERN_C BOOLEAN MouseMoveRELATIVE(LONG dx, LONG dy);
+EXTERN_C BOOLEAN MouseMoveABSOLUTE(LONG dx, LONG dy);

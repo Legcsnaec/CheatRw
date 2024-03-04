@@ -9,7 +9,6 @@ unsigned char shellcodex64[] = { 0x4D,0x33,0xC0,0x4D,0x33,0xC9,0x48,0x33,0xC9,0x
 int main()
 {
 	NTSTATUS stat;
-	
 	BOOLEAN ret = CtDriverLoad();
 	if (ret)
 	{
@@ -19,12 +18,22 @@ int main()
 		std::cout << "please input pid:" << endl;
 		std::cin >> p;
 
+		// æ‰±˙±£ª§≤‚ ‘
 		ProtectHandleInfo data4 = { 0 };
 		data4.Pid = p;
 		data4.IsInstall = TRUE;
 		stat = SendCommPacket(CMD_PROTECT_HANDLE, &data4, sizeof(ProtectHandleInfo));
 		printf("stat:%x\n", stat);
+
+		// º¸ Û≤‚ ‘
+		MouseMoveABSOLUTE(35, 107);
+		MouseLeftButtonDown();
+		MouseLeftButtonUp();
+
+		MouseLeftButtonDown();
+		MouseLeftButtonUp();
 	}
+	
 	system("pause");
 	return 0;
 }

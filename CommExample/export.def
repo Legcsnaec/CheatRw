@@ -10,3 +10,14 @@
 		CtRemoteCall
 
 		CT_RemoteCall=CtRemoteCall
+		
+		KeyDown
+		KeyUp
+		MouseLeftButtonDown
+		MouseLeftButtonUp
+		MouseRightButtonDown
+		MouseRightButtonUp
+		MouseMiddleButtonDown
+		MouseMiddleButtonUp
+		MouseMoveRELATIVE
+		MouseMoveABSOLUTE

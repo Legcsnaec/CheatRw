@@ -62,6 +62,8 @@ char* GetRandServiceName()
 	return name;
 }
 
+// ---------------------------------- 导出 ----------------------------------
+
 EXTERN_C BOOLEAN WINAPI CtTestConnect()
 {
 	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
@@ -166,5 +168,133 @@ EXTERN_C BOOLEAN WINAPI CtRemoteCall(DWORD_PTR pid, PVOID shellcode, DWORD shell
 	data.ShellCodePtr = (ULONG64)shellcode;
 	data.ShellCodeSize = shellcodeSize;
 	stat = SendCommPacket(CMD_REMOTE_CALL, &data, sizeof(RemoteCallInfo));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+// ---------------------------------- 键鼠相关导出 ----------------------------------
+
+EXTERN_C BOOLEAN KeyDown(USHORT VirtualKey)
+{
+	KEYBOARD_INPUT_DATA  kid;
+	DWORD dwOutput;
+	memset(&kid, 0, sizeof(KEYBOARD_INPUT_DATA));
+	kid.Flags = KEY_DOWN;
+	kid.MakeCode = (USHORT)MapVirtualKey(VirtualKey, 0);
+
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_KEYBOARD, &kid, sizeof(KEYBOARD_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN KeyUp(USHORT VirtualKey)
+{
+	KEYBOARD_INPUT_DATA  kid;
+	DWORD dwOutput;
+	memset(&kid, 0, sizeof(KEYBOARD_INPUT_DATA));
+	kid.Flags = KEY_UP;
+	kid.MakeCode = (USHORT)MapVirtualKey(VirtualKey, 0);
+
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_KEYBOARD, &kid, sizeof(KEYBOARD_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseLeftButtonDown()
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.ButtonFlags = MOUSE_LEFT_BUTTON_DOWN;
+
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseLeftButtonUp()
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.ButtonFlags = MOUSE_LEFT_BUTTON_UP;
+
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseRightButtonDown()
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.ButtonFlags = MOUSE_RIGHT_BUTTON_DOWN;
+	
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseRightButtonUp()
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.ButtonFlags = MOUSE_RIGHT_BUTTON_UP;
+	
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseMiddleButtonDown()
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.ButtonFlags = MOUSE_MIDDLE_BUTTON_DOWN;
+	
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseMiddleButtonUp()
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.ButtonFlags = MOUSE_MIDDLE_BUTTON_UP;
+	
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseMoveRELATIVE(LONG dx, LONG dy)
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.Flags = MOUSE_MOVE_RELATIVE;
+	mid.LastX = dx;
+	mid.LastY = dy;
+
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
+	return stat == RW_STATUS_SUCCESS;
+}
+
+EXTERN_C BOOLEAN MouseMoveABSOLUTE(LONG dx, LONG dy)
+{
+	MOUSE_INPUT_DATA  mid;
+	DWORD dwOutput;
+	memset(&mid, 0, sizeof(MOUSE_INPUT_DATA));
+	mid.Flags = MOUSE_MOVE_ABSOLUTE;
+	mid.LastX = dx * 0xffff / GetSystemMetrics(SM_CXSCREEN);
+	mid.LastY = dy * 0xffff / GetSystemMetrics(SM_CYSCREEN);
+
+	NTSTATUS stat = RW_STATUS_UNSUCCESSFUL;
+	stat = SendCommPacket(CMD_MOUSE, &mid, sizeof(MOUSE_INPUT_DATA));
 	return stat == RW_STATUS_SUCCESS;
 }
